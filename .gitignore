@@ -57,3 +57,6 @@ build/
 .agent/
 README.md
 .env*.local
+
+# Local Netlify folder
+.netlify

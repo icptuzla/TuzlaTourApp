@@ -168,7 +168,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ lang, onNavigate }) => {
         </div>
       </section>
 
-      <div className="max-w-4xl mx-auto px-4 py-16 space-y-24">
+      <div className="max-w-4xl mx-auto px-4 py-12 space-y-12">
         {/* 2. NAVIGATION CARDS */}
         <section ref={cardsSectionRef} id="explore-sections">
           <div className="mb-10">
@@ -234,8 +234,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ lang, onNavigate }) => {
         </div>
 
         {/* 3. EXTERNAL PARTNER LINKS */}
-        <section className="py-16">
-          <div className="mb-12 text-center md:text-left">
+        <section className="py-10">
+          <div className="mb-8 text-center md:text-left">
             <h2 className="text-[28px] font-black text-blue-900 tracking-tight uppercase font-quicksand">
               {t.linksTitle}
             </h2>
@@ -249,14 +249,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ lang, onNavigate }) => {
                 href={link.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group flex flex-col items-center justify-center p-8 bg-white rounded-[2rem] border border-blue-100 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 active:scale-95"
+                className="group flex flex-col items-center justify-center hover:scale-105 transition-transform duration-300 active:scale-95"
               >
-                <div className="h-16 w-full flex items-center justify-center mb-4">
-                  <img src={link.logo} alt={link.name} className="h-full w-auto object-contain transition-transform group-hover:scale-110" />
+                <div className="h-20 w-full flex items-center justify-center">
+                  <img src={link.logo} alt={link.name} className="h-full w-auto object-contain drop-shadow-sm group-hover:scale-110 transition-transform" />
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-blue-900/60 group-hover:text-blue-600 transition-colors">
-                  {link.name}
-                </span>
               </a>
             ))}
           </div>
@@ -294,14 +291,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ lang, onNavigate }) => {
         </section>
 
         {/* 4.5. SMARTPHONE VIDEO */}
-        <section className="py-16 flex flex-col items-center">
+        <section className="py-10 flex flex-col items-center">
           <div className="mb-10 text-center">
             <h2 className="text-[28px] font-black text-blue-900 tracking-tight uppercase font-quicksand">
               Video
             </h2>
             <div className="w-16 h-2 bg-blue-600 rounded-full mt-2 mx-auto" />
           </div>
-          <div className="relative w-[300px] h-[600px] border-[14px] border-slate-900 rounded-[3rem] bg-black shadow-2xl overflow-hidden ring-4 ring-slate-800">
+          <div className="relative w-[340px] h-[680px] border-[14px] border-slate-900 rounded-[3rem] bg-black shadow-2xl overflow-hidden ring-4 ring-slate-800">
             <div className="absolute top-0 inset-x-0 h-6 bg-slate-900 rounded-b-2xl w-32 mx-auto z-30"></div>
             <video
               ref={heroVideoRef}
@@ -332,7 +329,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ lang, onNavigate }) => {
         </section>
 
         {/* 4.6. SOCIAL & COMMUNITY */}
-        <section className="pt-12 pb-6">
+        <section className="pt-8 pb-4">
           <div className="mb-10 text-center flex flex-col items-center">
             <h2 className="text-[28px] font-black text-blue-900 tracking-tight uppercase font-quicksand">
               {lang === 'bs' ? 'Zajednica & Mreže' : 'Community & Social'}
@@ -345,6 +342,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ lang, onNavigate }) => {
               <a href="https://x.com/icptuzla" className="p-4 rounded-full bg-slate-100 text-slate-400 hover:text-[#1DA1F2] hover:bg-[#1DA1F2]/10 transition-colors relative group">
                 <img src="/assets/x.svg" alt="X" className="w-6 h-6" />
                 <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] uppercase font-bold px-3 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">Twitter (X)</span>
+              </a>
+              <a href="https://bsky.app/profile/aisotuzla.bsky.social" className="p-4 rounded-full bg-slate-100 text-slate-400 hover:text-[#0285FF] hover:bg-[#0285FF]/10 transition-colors relative group">
+                <img src="/assets/bluesky.svg" alt="Bluesky" className="w-6 h-6" />
+                <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] uppercase font-bold px-3 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">Bluesky</span>
               </a>
               <a href="https://www.facebook.com/AmirICPTuzla" className="p-4 rounded-full bg-slate-100 text-slate-400 hover:text-[#4267B2] hover:bg-[#4267B2]/10 transition-colors relative group">
                 <Facebook className="w-6 h-6" />
@@ -366,18 +367,18 @@ const LandingPage: React.FC<LandingPageProps> = ({ lang, onNavigate }) => {
                 className="flex items-center gap-2 group hover:text-blue-600 transition-colors border-b-2 border-transparent hover:border-blue-600 pb-1 text-slate-400"
               >
                 <img
-                  src="/assets/Gallery/QuestQRLocations/LogoICP3D.webp"
-                  alt="ICP Logo"
+                  src="/assets/aisologo.webp"
+                  alt="AISO Logo"
                   className="w-6 h-6 object-contain pointer-events-none group-hover:scale-110 transition-transform"
                 />
-                <span>ICP Tuzla</span>
+                <span>AISO Tuzla</span>
               </a>
             </div>
           </div>
         </section>
 
         {/* 5. EXPLORE MORE ENDING */}
-        <section className="py-24 border-t border-slate-100 text-center">
+        <section className="py-12 border-t border-slate-100 text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}

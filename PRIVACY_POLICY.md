@@ -25,9 +25,9 @@ We strongly believe in **data minimization** and **privacy by design**. Our App 
 - **Processing:** The camera feed is processed **strictly locally** on your device in real time. We do **not** take photos, record videos, or upload any visual data from your camera to our servers.
 - **Legal Basis:** Your explicit consent (granted when you allow the App camera permissions).
 
-### C. Web3 Wallet Data (TON)
+### C. Web3 Wallet Data (Solana)
 - **Purpose:** To allow you to unlock digital rewards or discounts securely via blockchain networks.
-- **Processing:** The App only reads your public wallet address to verify connection and transactions. We absolutely never ask for, nor do we have access to, your private keys or seed phrases. History is managed by your external wallet provider (e.g., Tonkeeper, MyTonWallet).
+- **Processing:** The App only reads your public wallet address to verify connection and transactions. We absolutely never ask for, nor do we have access to, your private keys or seed phrases. History is managed by your external wallet provider (e.g., Solflare, Phantom).
 - **Legal Basis:** Processing is necessary for the performance of the service (delivering rewards) to which you are a party.
 
 ### D. Device Storage (Preferences)
