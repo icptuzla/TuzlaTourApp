@@ -44,7 +44,7 @@ const AllVenuesSection: React.FC<{ lang: Language }> = ({ lang }) => {
           {lang === 'en' ? 'Food Places' : lang === 'bs' ? 'Hrana i piće' : lang === 'de' ? 'Essensplätze' : 'Yemek Mekanları'}
         </h2>
         <p className="text-blue-500/80 font-semibold uppercase text-xs tracking-[0.2em]">
-          {lang === 'en' ? 'Best dining in one place' : lang === 'de' ? 'Restaurants an einem Ort' : 'Restorani na jednom mjestu'}
+          {lang === 'en' ? 'Best dining in one place' : lang === 'de' ? 'Restaurants an einem Ort' : lang === 'tr' ? 'En iyi restoranlar tek yerde' : 'Restorani na jednom mjestu'}
         </p>
       </div>
 
@@ -107,7 +107,7 @@ const AllVenuesSection: React.FC<{ lang: Language }> = ({ lang }) => {
                   {typeLabel(venue)}
                 </span>
                 <span className="text-[10px] font-black text-blue-400">
-                  {venue.user_ratings_total} {lang === 'en' ? 'reviews' : lang === 'de' ? 'Bewertungen' : 'recenzija'}
+                  {venue.user_ratings_total} {lang === 'en' ? 'reviews' : lang === 'de' ? 'Bewertungen' : lang === 'tr' ? 'yorum' : 'recenzija'}
                 </span>
               </div>
 
@@ -206,17 +206,19 @@ const Food: React.FC<FoodProps> = ({ lang }) => {
         <div className="space-y-4">
           <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.24em] text-blue-700 shadow-sm">
             <UtensilsCrossed className="h-4 w-4" />
-            {lang === 'en' ? 'Food & Drink' : lang === 'de' ? 'Essen & Trinken' : 'Hrana i piće'}
+            {lang === 'en' ? 'Food & Drink' : lang === 'de' ? 'Essen & Trinken' : lang === 'tr' ? 'Yemek & İçecek' : 'Hrana i piće'}
           </div>
           <h1 className="text-4xl md:text-6xl font-black text-blue-950 uppercase tracking-tighter">
-            {lang === 'en' ? 'Gastronomy' : lang === 'de' ? 'Gastronomie' : 'Gastronomija'}
+            {lang === 'en' ? 'Gastronomy' : lang === 'de' ? 'Gastronomie' : lang === 'tr' ? 'Gastronomi' : 'Gastronomija'}
           </h1>
           <p className="text-blue-600 font-medium text-lg max-w-2xl mx-auto leading-relaxed">
             {lang === 'en'
               ? 'Discover best restaurants and local flavors in Tuzla.'
               : lang === 'de'
                 ? 'Entdecken Sie die besten Restaurants und lokalen Spezialitäten in Tuzla.'
-                : 'Otkrijte najbolje restorane i lokalne okuse u Tuzli.'}
+                : lang === 'tr'
+                  ? 'Tuzla\'nın en iyi restoranlarını ve yerel lezzetlerini keşfedin.'
+                  : 'Otkrijte najbolje restorane i lokalne okuse u Tuzli.'}
           </p>
         </div>
 

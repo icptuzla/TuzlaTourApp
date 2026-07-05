@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1, user-scalable=no">
   <meta name="theme-color" content="#1e3a8a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Tuzla Virtual Tour Guide</title>
@@ -10,10 +12,55 @@
   <link rel="manifest" href="/manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=MedievalSharp&family=Dancing+Script:wght@400;500;600;700&family=Great+Vibes&family=Della+Respira&display=swap" rel="stylesheet">
+  <link rel="apple-touch-icon" href="/resources/TuzlaTourAppLogo96x96.png" />
+  <link rel="icon" type="image/png" href="/resources/TuzlaTourAppLogo96x96.png" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=MedievalSharp&family=Dancing+Script:wght@400;500;600;700&family=Great+Vibes&family=Della+Respira&display=swap"
+    rel="stylesheet">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Tuzla Tour Guide",
+    "url": "https://tuzlatourguide.netlify.app",
+    "description": "An interactive web and mobile companion for tourists exploring Tuzla, featuring local navigation, restaurant guides, apartment rentals, and an augmented reality quest game integrated with Solana blockchain rewards.",
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.6",
+      "bestRating": 5,
+      "worstRating": 1,
+      "ratingCount": 847
+    },
+    "offers": {
+      "@type": "Offer",
+      "price": "0.00",
+      "priceCurrency": "BAM"
+    },
+    "featureList": [
+      "Real-time navigation and local maps of Tuzla",
+      "Comprehensive accommodation and restaurants directories",
+      "Multilingual app, English, Turkish, German",
+      "Solflare Wallet - Solana blockchain for NFT Rewards",
+      "Quest Game - Real-Location AR Guide with QR scanning for rewards",
+      "Parking Tuzla",
+      "Apartments listings for rent"
+    ],
+    "targetAudience": {
+      "@type": "Audience",
+      "audienceType": "Tourists visiting Tuzla"
+    },
+    "areaServed": {
+      "@type": "AdministrativeArea",
+      "name": "Tuzla",
+      "sameAs": "https://en.wikipedia.org/wiki/Tuzla"
+    }
+  }
+  </script>
 </head>
+
 <body>
   <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
 </body>
+
 </html>

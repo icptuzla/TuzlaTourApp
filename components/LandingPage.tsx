@@ -34,36 +34,75 @@ const copy = {
     cardsTitle: 'Your Journey Starts Here',
     linksTitle: 'Quick Links',
     albumTitle: 'Photo Gallery',
+    albumText: 'No photo can show the full charm and beauty of this city, so come and visit us.',
+    videoTitle: 'Video',
+    communityTitle: 'Community & Social',
+    exploreMoreTitle: 'Explore More',
+    exploreMoreText: "Your journey doesn't end here. Tuzla offers endless stories and hidden gems waiting to be discovered.",
+    backToTop: 'Back to Home',
+    shareApp: 'Share App',
+    shareText: 'Check out this interactive map and guide to Tuzla!',
+    linkCopied: 'Link copied to clipboard!',
     explore: 'Explore',
+    gipsLabel: 'Track your City Bus Line Location',
   },
   bs: {
     heroScroll: 'Istražite Tuzlu',
     cardsTitle: 'Tvoje putovanje počinje ovdje',
     linksTitle: 'Brzi linkovi i partneri',
     albumTitle: 'Foto Galerija',
+    videoTitle: 'Video',
+    communityTitle: 'Zajednica i mreže',
+    exploreMoreTitle: 'Istražite više',
+    exploreMoreText: 'Vaše putovanje se ne završava ovdje. Tuzla nudi beskrajne priče i skrivene dragulje.',
+    backToTop: 'Povratak na vrh',
+    shareApp: 'Podijeli aplikaciju',
+    shareText: 'Istraži Tuzlu kroz ovu interaktivnu aplikaciju!',
+    linkCopied: 'Link kopiran!',
     explore: 'Istraži',
+    gipsLabel: 'GIPS red vožnje i lokacija',
   },
   de: {
     heroScroll: 'Entdecke Tuzla',
     cardsTitle: 'Deine Reise beginnt hier',
     linksTitle: 'Schnellzugriffe und Partner',
     albumTitle: 'Fotoalbum',
+    albumText: 'Kein Foto kann den ganzen Charme und die Schönheit dieser Stadt zeigen. Kommen Sie und besuchen Sie uns.',
+    videoTitle: 'Video',
+    communityTitle: 'Community & Soziale Medien',
+    exploreMoreTitle: 'Mehr Entdecken',
+    exploreMoreText: 'Ihre Reise endet hier nicht. Tuzla bietet unzählige Geschichten und verborgene Orte, die darauf warten, entdeckt zu werden.',
+    backToTop: 'Zurück nach oben',
+    shareApp: 'App teilen',
+    shareText: 'Entdecke Tuzla mit dieser interaktiven Karte und diesem Reiseführer!',
+    linkCopied: 'Link wurde kopiert!',
     explore: 'Entdecken',
+    gipsLabel: 'Stadtbus-Linie in Echtzeit verfolgen',
   },
   tr: {
-    heroScroll: 'Tuzla\'yi Keşfet',
-    cardsTitle: 'Yolculuğun Burada Başliyor',
-    linksTitle: 'Hizli Linkler ve Partnerler',
+    heroScroll: 'Tuzla\'yı Keşfet',
+    cardsTitle: 'Yolculuğun Burada Başlıyor',
+    linksTitle: 'Hızlı Bağlantılar ve Ortaklar',
     albumTitle: 'Fotoğraf Albümü',
+    albumText: 'Hiçbir fotoğraf bu şehrin tüm cazibesini ve güzelliğini gösteremez; gelin ve bizi ziyaret edin.',
+    videoTitle: 'Video',
+    communityTitle: 'Topluluk ve Sosyal Medya',
+    exploreMoreTitle: 'Daha Fazla Keşfet',
+    exploreMoreText: 'Yolculuğunuz burada bitmiyor. Tuzla, keşfedilmeyi bekleyen sayısız hikaye ve gizli güzellik sunuyor.',
+    backToTop: 'Başa dön',
+    shareApp: 'Uygulamayı paylaş',
+    shareText: 'Bu interaktif harita ve rehberle Tuzla’yı keşfet!',
+    linkCopied: 'Bağlantı kopyalandı!',
     explore: 'Keşfet',
+    gipsLabel: 'Şehir otobüs hattını canlı takip et',
   },
 } as const;
 
 const navCards = [
-  { id: AppTab.CITY_GUIDE, title: { en: 'City Guide', bs: 'Gradski Vodič' }, image: '/assets/Gallery/City Guide/GradTuzla-1.webp', color: 'blue' },
-  { id: AppTab.FOOD, title: { en: 'Food', bs: 'Hrana' }, image: '/assets/Gallery/Food/foodprime.webp', color: 'orange' },
-  { id: AppTab.ACCOMMODATION, title: { en: 'Accommodation', bs: 'Smještaj' }, image: '/assets/Gallery/Accommodation/mellain.webp', color: 'indigo' },
-  { id: AppTab.MAP, title: { en: 'Map', bs: 'Mapa' }, image: '/assets/MapaBosnia.webp', color: 'blue' },
+  { id: AppTab.CITY_GUIDE, title: { en: 'City Guide', bs: 'Gradski vodič', de: 'Stadtführer', tr: 'Şehir Rehberi' }, image: '/assets/Gallery/City Guide/GradTuzla-1.webp', color: 'blue' },
+  { id: AppTab.FOOD, title: { en: 'Food', bs: 'Hrana', de: 'Essen & Trinken', tr: 'Yemek & İçecek' }, image: '/assets/Gallery/Food/foodprime.webp', color: 'orange' },
+  { id: AppTab.ACCOMMODATION, title: { en: 'Accommodation', bs: 'Smještaj', de: 'Unterkunft', tr: 'Konaklama' }, image: '/assets/Gallery/Accommodation/mellain.webp', color: 'indigo' },
+  { id: AppTab.MAP, title: { en: 'Map', bs: 'Mapa', de: 'Karte', tr: 'Harita' }, image: '/assets/MapaBosnia.webp', color: 'blue' },
 ];
 
 const externalLinks = [
@@ -129,7 +168,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ lang, onNavigate }) => {
       try {
         await navigator.share({
           title: 'Tuzla Virtual Tour Guide',
-          text: lang === 'bs' ? 'Istraži Tuzlu kroz ovu interaktivnu aplikaciju!' : 'Check out this interactive map and guide to Tuzla!',
+          text: t.shareText,
           url: window.location.href,
         });
       } catch (error) {
@@ -137,7 +176,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ lang, onNavigate }) => {
       }
     } else {
       navigator.clipboard.writeText(window.location.href);
-      alert(lang === 'bs' ? 'Link kopiran!' : 'Link copied to clipboard!');
+      alert(t.linkCopied);
     }
   };
 
@@ -145,11 +184,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ lang, onNavigate }) => {
     <div className="bg-white">
       {/* 1. HERO SECTION */}
       <section
-        className="relative h-screen w-full overflow-hidden bg-white flex items-center justify-center"
+        className="relative h-screen w-full overflow-hidden flex items-center justify-center bg-white"
       >
         <img
           src="/assets/tuzguide.webp"
-          alt="Tuzla Guide"
+          alt="Tuzla"
           className="absolute inset-0 h-full w-full object-cover z-0"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/60 z-0" />
@@ -202,21 +241,29 @@ const LandingPage: React.FC<LandingPageProps> = ({ lang, onNavigate }) => {
         </section>
 
         {/* 2.5. Pannonica Special */}
-        <div className="w-full mt-8 relative rounded-[2.5rem] overflow-hidden shadow-2xl border-2 border-blue-400/40 group">
-          <div
-            className="cursor-pointer"
-            onClick={() => openGallery(['/assets/Pannonica.webp', ...previewImages], 0)}
-          >
-            <img
-              src="/assets/Pannonica.webp"
-              alt="Pannonica Lakes"
-              className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-105"
-            />
-          </div>
-          <div className="absolute bottom-4 right-4 bg-black/40 backdrop-blur-sm text-white/80 p-2.5 rounded-2xl pointer-events-none">
-            <ZoomIn size={20} />
-          </div>
-        </div>
+        {(() => {
+          const pannonicaSrc = lang === 'bs' ? '/assets/PannonicaBA.webp'
+            : lang === 'de' ? '/assets/PannonicaDE.webp'
+              : lang === 'tr' ? '/assets/PannonicaTR.webp'
+                : '/assets/Pannonica.webp';
+          return (
+            <div className="w-full mt-8 relative rounded-[2.5rem] overflow-hidden shadow-2xl border-2 border-blue-400/40 group">
+              <div
+                className="cursor-pointer"
+                onClick={() => openGallery([pannonicaSrc, ...previewImages], 0)}
+              >
+                <img
+                  src={pannonicaSrc}
+                  alt="Pannonica Lakes"
+                  className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+              </div>
+              <div className="absolute bottom-4 right-4 bg-black/40 backdrop-blur-sm text-white/80 p-2.5 rounded-2xl pointer-events-none">
+                <ZoomIn size={20} />
+              </div>
+            </div>
+          );
+        })()}
 
         <div className="w-full flex justify-center mt-4">
           <a
@@ -281,24 +328,18 @@ const LandingPage: React.FC<LandingPageProps> = ({ lang, onNavigate }) => {
             ))}
           </div>
 
-          <div className="mt-12 text-center">
-            <p className="text-xl font-black text-blue-900/80 italic font-quicksand leading-relaxed max-w-2xl mx-auto px-4">
-              {lang === 'bs' || lang === 'en' || lang === 'de' || lang === 'tr'
-                ? 'Posjetite Tuzlu' : 'Visit Tuzla'}
-            </p>
-            <div className="w-12 h-1 bg-amber-400 rounded-full mx-auto mt-4 opacity-50" />
-          </div>
+
         </section>
 
         {/* 4.5. SMARTPHONE VIDEO */}
         <section className="py-10 flex flex-col items-center">
           <div className="mb-10 text-center">
             <h2 className="text-[28px] font-black text-blue-900 tracking-tight uppercase font-quicksand">
-              Video
+              {t.videoTitle}
             </h2>
             <div className="w-16 h-2 bg-blue-600 rounded-full mt-2 mx-auto" />
           </div>
-          <div className="relative w-[340px] h-[680px] border-[14px] border-slate-900 rounded-[3rem] bg-black shadow-2xl overflow-hidden ring-4 ring-slate-800">
+          <div className="relative w-[350px] h-[700px] border-[14px] border-slate-900 rounded-[3rem] bg-black shadow-2xl overflow-hidden ring-4 ring-slate-800">
             <div className="absolute top-0 inset-x-0 h-6 bg-slate-900 rounded-b-2xl w-32 mx-auto z-30"></div>
             <video
               ref={heroVideoRef}
@@ -307,14 +348,33 @@ const LandingPage: React.FC<LandingPageProps> = ({ lang, onNavigate }) => {
               src={videoSrc}
               onEnded={handleHeroVideoEnd}
               onError={handleVideoError}
+              preload="none"
             />
+            {/* Black cover hides native browser play button */}
             <AnimatePresence>
               {!isHeroPlaying && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="absolute inset-0 flex items-center justify-center z-20 bg-black/30"
+                  className="absolute inset-0 z-10 bg-black flex items-center justify-center"
+                >
+                  <img
+                    src="/assets/Gallery/tuzguidewide.webp"
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover opacity-40"
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+            {/* Custom play button always on top */}
+            <AnimatePresence>
+              {!isHeroPlaying && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 flex items-center justify-center z-20"
                 >
                   <button
                     onClick={toggleHeroVideo}
@@ -328,11 +388,32 @@ const LandingPage: React.FC<LandingPageProps> = ({ lang, onNavigate }) => {
           </div>
         </section>
 
+        {/* 4.55. GIPS BUS TRACKING */}
+        <div className="w-full flex flex-col items-center mt-2 mb-6">
+          <a
+            href="https://www.gipstk.com/red-voznje/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex flex-col items-center gap-3 hover:scale-105 active:scale-95 transition-transform duration-300"
+          >
+            <div className="w-[180px] h-[90px] bg-white rounded-2xl shadow-lg border border-blue-100 flex items-center justify-center overflow-hidden group-hover:shadow-blue-200 group-hover:shadow-xl transition-shadow duration-300">
+              <img
+                src="/assets/Gallery/gipslogo.png"
+                alt="GIPS Logo"
+                className="w-full h-full object-contain p-3"
+              />
+            </div>
+            <span className="text-sm font-bold text-blue-700 uppercase tracking-wider text-center px-4">
+              {t.gipsLabel}
+            </span>
+          </a>
+        </div>
+
         {/* 4.6. SOCIAL & COMMUNITY */}
         <section className="pt-8 pb-4">
           <div className="mb-10 text-center flex flex-col items-center">
             <h2 className="text-[28px] font-black text-blue-900 tracking-tight uppercase font-quicksand">
-              {lang === 'bs' ? 'Zajednica & Mreže' : 'Community & Social'}
+              {t.communityTitle}
             </h2>
             <div className="w-20 h-2 bg-blue-600 rounded-full mt-2" />
           </div>
@@ -357,7 +438,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ lang, onNavigate }) => {
               </a>
               <button onClick={handleShare} className="p-4 rounded-full bg-slate-100 text-slate-400 hover:text-amber-500 hover:bg-amber-50 transition-colors relative group cursor-pointer">
                 <Share2 className="w-6 h-6" />
-                <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] uppercase font-bold px-3 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">Share App</span>
+                <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] uppercase font-bold px-3 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">{t.shareApp}</span>
               </button>
             </div>
 
@@ -389,19 +470,17 @@ const LandingPage: React.FC<LandingPageProps> = ({ lang, onNavigate }) => {
               <Home className="w-8 h-8 text-blue-600" />
             </div>
             <h2 className="text-4xl font-black text-blue-900 uppercase tracking-tight font-quicksand">
-              {lang === 'bs' ? 'Istražite više' : 'Explore More'}
+              {t.exploreMoreTitle}
             </h2>
             <p className="text-slate-500 max-w-lg mx-auto text-lg leading-relaxed font-medium">
-              {lang === 'bs'
-                ? 'Vaše putovanje se ne završava ovdje. Tuzla nudi beskrajne priče i skrivene dragulje.'
-                : 'Your journey doesn\'t end here. Tuzla offers endless stories and hidden gems waiting to be discovered.'}
+              {t.exploreMoreText}
             </p>
             <button
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
               className="mt-8 px-12 py-5 bg-blue-600 text-white font-black rounded-[2rem] shadow-2xl hover:bg-blue-700 hover:scale-105 active:scale-95 transition-all uppercase tracking-widest text-sm flex items-center gap-3 mx-auto font-quicksand"
             >
               <ArrowUp className="w-5 h-5" />
-              {lang === 'bs' ? 'Povratak na vrh' : 'Back to Home'}
+              {t.backToTop}
             </button>
           </motion.div>
         </section>

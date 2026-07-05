@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 
 import { Language } from '../types';
 import { TRANSLATIONS } from '../constants';
-import { Wallet as WalletIcon, Lock, CheckCircle2, Home, Stethoscope, Globe, X, Copy, ExternalLink, Zap } from 'lucide-react';
+import { Wallet as WalletIcon, Lock, CheckCircle2, Home, Stethoscope, Globe, X, Copy, ExternalLink, Zap, QrCode, Award, ArrowLeftRight } from 'lucide-react';
 import { useNetwork } from '../hooks/useNetwork';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Html5Qrcode } from 'html5-qrcode';
 
 
 
@@ -21,12 +22,22 @@ interface WalletProps {
 const Wallet: React.FC<WalletProps> = ({ lang }) => {
     const [activeSubTab, setActiveSubTab] = useState<'PAYMENT'>('PAYMENT');
     const [bamValue, setBamValue] = useState<string>('');
+    const [conversionMode, setConversionMode] = useState<'BAM_TO_EUR' | 'EUR_TO_BAM'>('BAM_TO_EUR');
     const [solBalance, setSolBalance] = useState<number | null>(null);
     const [copySuccess, setCopySuccess] = useState(false);
 
+    const [isScanning, setIsScanning] = useState(false);
+    const [scannedReward, setScannedReward] = useState<string | null>(null);
+    const [isMinting, setIsMinting] = useState(false);
+    const scannerRef = useRef<Html5Qrcode | null>(null);
+
     const isOnline = useNetwork();
     const t = TRANSLATIONS[lang];
-    const eurValue = bamValue ? (parseFloat(bamValue) / 1.95583).toFixed(2) : '0.00';
+    const convertedValue = bamValue
+        ? conversionMode === 'BAM_TO_EUR'
+            ? (parseFloat(bamValue) / 1.95583).toFixed(2)
+            : (parseFloat(bamValue) * 1.95583).toFixed(2)
+        : '0.00';
 
     // Solana wallet state
     const { publicKey, disconnect: solDisconnect, connected: solConnected, wallet: solWallet } = useWallet();
@@ -63,10 +74,74 @@ const Wallet: React.FC<WalletProps> = ({ lang }) => {
 
     const shortAddress = (addr: string) => `${addr.slice(0, 4)}...${addr.slice(-4)}`;
 
+    const startScanner = async () => {
+        setIsScanning(true);
+        setScannedReward(null);
+        setTimeout(async () => {
+            if (!document.getElementById('wallet-reader')) return;
+            try {
+                const scanner = new Html5Qrcode('wallet-reader');
+                scannerRef.current = scanner;
+                await scanner.start(
+                    { facingMode: 'environment' },
+                    { fps: 10, qrbox: { width: 250, height: 250 } },
+                    (decodedText) => {
+                        setScannedReward(decodedText);
+                        stopScanner();
+                    },
+                    (errorMessage) => { }
+                );
+            } catch (err) {
+                console.error("Scanner error", err);
+                setIsScanning(false);
+                alert(lang === 'bs' ? "Nije moguće pokrenuti kameru." : "Could not start camera.");
+            }
+        }, 100);
+    };
 
+    const stopScanner = () => {
+        if (scannerRef.current) {
+            scannerRef.current.stop().then(() => {
+                scannerRef.current?.clear();
+                scannerRef.current = null;
+                setIsScanning(false);
+            }).catch(e => {
+                console.error(e);
+                setIsScanning(false);
+            });
+        } else {
+            setIsScanning(false);
+        }
+    };
+
+    useEffect(() => {
+        return () => {
+            if (scannerRef.current) {
+                scannerRef.current.stop().catch(() => {});
+            }
+        }
+    }, []);
+
+    const handleMint = async () => {
+        if (!solConnected || !publicKey) {
+            alert(lang === 'bs' ? 'Molimo spojite Solflare novčanik.' : 'Please connect your Solflare wallet.');
+            return;
+        }
+        setIsMinting(true);
+        try {
+            // Simulate mint transaction for Solflare interaction
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            alert(lang === 'bs' ? `Uspješno mintano u Solflare: ${scannedReward}` : `Successfully minted to Solflare: ${scannedReward}`);
+            setScannedReward(null);
+        } catch (error) {
+            alert(lang === 'bs' ? "Mintanje nije uspjelo" : "Minting failed");
+        } finally {
+            setIsMinting(false);
+        }
+    };
 
     return (
-        <div className="min-h-screen bg-slate-50/50 pb-32">
+        <div className="min-h-screen bg-slate-50/50 pb-32 overflow-x-hidden">
             <div className="max-w-6xl mx-auto p-4 sm:p-8">
                 {/* Offline Warning */}
                 {!isOnline && (
@@ -101,8 +176,8 @@ const Wallet: React.FC<WalletProps> = ({ lang }) => {
 
 
                                     {/* Solana Card */}
-                                    <div className="p-6 glassy rounded-[2rem] border border-purple-100 shadow-xl space-y-4">
-                                        <div className="flex justify-between items-center flex-wrap gap-3">
+                                    <div className="p-4 sm:p-6 glassy rounded-[2rem] border border-purple-100 shadow-xl space-y-4 overflow-hidden">
+                                        <div className="flex justify-between items-center flex-wrap gap-2 max-w-full">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
                                                     <Zap size={18} className="text-white" />
@@ -116,16 +191,22 @@ const Wallet: React.FC<WalletProps> = ({ lang }) => {
                                                     )}
                                                 </div>
                                             </div>
-                                            <WalletMultiButton
-                                                style={{
-                                                    background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
-                                                    borderRadius: '1rem',
-                                                    fontSize: '11px',
-                                                    fontWeight: 900,
-                                                    height: '40px',
-                                                    padding: '0 16px',
-                                                }}
-                                            />
+                                            <div className="max-w-[160px] overflow-hidden">
+                                              <WalletMultiButton
+                                                  style={{
+                                                      background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
+                                                      borderRadius: '1rem',
+                                                      fontSize: '10px',
+                                                      fontWeight: 900,
+                                                      height: '36px',
+                                                      padding: '0 12px',
+                                                      maxWidth: '100%',
+                                                      overflow: 'hidden',
+                                                      textOverflow: 'ellipsis',
+                                                      whiteSpace: 'nowrap',
+                                                  }}
+                                              />
+                                            </div>
                                         </div>
 
                                         {/* SOL Balance + Address actions */}
@@ -155,15 +236,16 @@ const Wallet: React.FC<WalletProps> = ({ lang }) => {
                                                                     : <Copy size={16} className="text-purple-600" />
                                                                 }
                                                             </button>
-                                                            <button
-                                                                onClick={() => window.open(`https://explorer.solana.com/address/${publicKey.toBase58()}?cluster=devnet`, '_blank')}
-                                                                className="p-2 bg-purple-100 rounded-xl hover:bg-purple-200 transition-all active:scale-90"
-                                                                title="View on explorer"
-                                                            >
-                                                                <ExternalLink size={16} className="text-purple-600" />
-                                                            </button>
                                                         </div>
                                                     </div>
+                                                    {/* Solana Explorer Button */}
+                                                    <button
+                                                        onClick={() => window.open(`https://explorer.solana.com/address/${publicKey.toBase58()}?cluster=devnet`, '_blank')}
+                                                        className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow hover:shadow-lg active:scale-95 transition-all"
+                                                    >
+                                                        <ExternalLink size={14} />
+                                                        {lang === 'bs' ? 'Pregledaj na Solana Exploreru' : 'View on Solana Explorer'}
+                                                    </button>
                                                     <p className="text-[10px] text-purple-300 font-mono break-all">
                                                         {publicKey.toBase58()}
                                                     </p>
@@ -171,12 +253,91 @@ const Wallet: React.FC<WalletProps> = ({ lang }) => {
                                             )}
                                         </AnimatePresence>
                                     </div>
+                                    {/* NFT Rewards Card */}
+                                    <div className="p-4 sm:p-6 glassy rounded-[2rem] border border-fuchsia-100 shadow-xl space-y-4 overflow-hidden">
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 bg-gradient-to-br from-fuchsia-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+                                                    <Award size={18} className="text-white" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-black text-fuchsia-400 uppercase tracking-widest">NFT Rewards</p>
+                                                    <p className="text-base font-black text-fuchsia-950">Scan & Mint</p>
+                                                </div>
+                                            </div>
+                                            {!isScanning && !scannedReward && (
+                                                <button
+                                                    onClick={startScanner}
+                                                    className="w-10 h-10 bg-fuchsia-100 text-fuchsia-600 rounded-xl flex items-center justify-center hover:bg-fuchsia-200 transition-colors active:scale-95"
+                                                    title="Scan QR Code"
+                                                >
+                                                    <QrCode size={20} />
+                                                </button>
+                                            )}
+                                        </div>
+                                        
+                                        <AnimatePresence>
+                                            {isScanning && (
+                                                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                                                    <div className="relative rounded-2xl overflow-hidden bg-black aspect-square max-h-64 mx-auto w-full max-w-[256px] border-4 border-fuchsia-100 mt-4">
+                                                        <div id="wallet-reader" className="w-full h-full"></div>
+                                                        <button onClick={stopScanner} className="absolute top-2 right-2 p-2 bg-black/50 text-white rounded-full hover:bg-black/70 z-50">
+                                                            <X size={16} />
+                                                        </button>
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                            
+                                            {scannedReward && (
+                                                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="pt-4 border-t border-fuchsia-100 space-y-3">
+                                                    <div className="p-4 bg-fuchsia-50 rounded-xl border border-fuchsia-100 text-center">
+                                                        <p className="text-xs font-bold text-fuchsia-600 uppercase mb-1">Found Reward</p>
+                                                        <p className="text-sm font-black text-fuchsia-950 truncate">{scannedReward}</p>
+                                                    </div>
+                                                    <button
+                                                        onClick={handleMint}
+                                                        disabled={isMinting || !solConnected}
+                                                        className={`w-full py-3 rounded-xl font-black uppercase tracking-widest text-sm flex justify-center items-center gap-2 transition-all ${
+                                                            !solConnected ? 'bg-slate-100 text-slate-400 cursor-not-allowed' :
+                                                            isMinting ? 'bg-fuchsia-300 text-fuchsia-700 animate-pulse' : 'bg-gradient-to-r from-fuchsia-500 to-pink-500 text-white shadow-lg hover:shadow-xl active:scale-95'
+                                                        }`}
+                                                    >
+                                                        {isMinting ? (lang === 'bs' ? 'Mintanje...' : 'Minting...') : (lang === 'bs' ? 'Mintaj na Solflare' : 'Mint to Solflare')}
+                                                    </button>
+                                                    {!solConnected && (
+                                                        <p className="text-[10px] text-center text-rose-500 font-bold uppercase mt-2">
+                                                            {lang === 'bs' ? 'Spojite Solflare novčanik za mintanje' : 'Connect Solflare wallet to mint'}
+                                                        </p>
+                                                    )}
+                                                    <button onClick={() => setScannedReward(null)} className="w-full text-center text-xs text-slate-400 font-bold uppercase hover:text-slate-600">
+                                                        Cancel
+                                                    </button>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+
                                     {/* Currency Converter */}
-                                    <div className="p-6 glassy rounded-[2rem] border border-blue-100 shadow-xl space-y-4">
-                                        <h3 className="text-xs font-black text-blue-400 uppercase tracking-widest">Currency Converter</h3>
+                                    <div className="p-4 sm:p-6 glassy rounded-[2rem] border border-blue-100 shadow-xl space-y-4 overflow-hidden">
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="text-xs font-black text-blue-400 uppercase tracking-widest">Currency Converter</h3>
+                                            <button
+                                                onClick={() => {
+                                                    setConversionMode(m => m === 'BAM_TO_EUR' ? 'EUR_TO_BAM' : 'BAM_TO_EUR');
+                                                    setBamValue('');
+                                                }}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-blue-700 active:scale-95 transition-all shadow"
+                                                title="Switch conversion direction"
+                                            >
+                                                <ArrowLeftRight size={12} />
+                                                {conversionMode === 'BAM_TO_EUR' ? 'BAM → EUR' : 'EUR → BAM'}
+                                            </button>
+                                        </div>
                                         <div className="space-y-3">
                                             <div>
-                                                <label className="text-[10px] font-bold text-blue-300 uppercase block mb-1">Enter BAM</label>
+                                                <label className="text-[10px] font-bold text-blue-300 uppercase block mb-1">
+                                                    {conversionMode === 'BAM_TO_EUR' ? 'Enter BAM' : 'Enter EUR'}
+                                                </label>
                                                 <input
                                                     type="number"
                                                     value={bamValue}
@@ -186,8 +347,15 @@ const Wallet: React.FC<WalletProps> = ({ lang }) => {
                                                 />
                                             </div>
                                             <div className="bg-blue-900/5 p-5 rounded-2xl border border-blue-100/50">
-                                                <p className="text-[10px] font-bold text-blue-300 uppercase mb-1">Estimated EUR</p>
-                                                <p className="text-3xl font-black text-blue-600">€ {eurValue}</p>
+                                                <p className="text-[10px] font-bold text-blue-300 uppercase mb-1">
+                                                    {conversionMode === 'BAM_TO_EUR' ? 'Estimated EUR' : 'Estimated BAM'}
+                                                </p>
+                                                <p className="text-3xl font-black text-blue-600">
+                                                    {conversionMode === 'BAM_TO_EUR' ? `€ ${convertedValue}` : `KM ${convertedValue}`}
+                                                </p>
+                                                <p className="text-[10px] text-blue-300 mt-1">
+                                                    Rate: 1 EUR = 1.95583 BAM
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
@@ -209,7 +377,7 @@ const Wallet: React.FC<WalletProps> = ({ lang }) => {
                                 </div>
 
                                 {/* ── Right Column: Partner Links ── */}
-                                <div className="p-8 glassy rounded-[3rem] border border-emerald-100 shadow-xl space-y-6">
+                                <div className="p-4 sm:p-8 glassy rounded-[2rem] sm:rounded-[3rem] border border-emerald-100 shadow-xl space-y-6 overflow-hidden">
                                     <h2 className="text-xl font-black text-emerald-950 uppercase tracking-tight flex items-center gap-2">
                                         <Globe size={20} className="text-emerald-600" />
                                         Partner Agencies

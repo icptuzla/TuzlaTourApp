@@ -17,9 +17,24 @@ import {
 import { tuzlaHotelData, HotelData } from '../tuzlaHotelData';
 import { addToItinerary } from '../utils/itineraryUtils';
 import { useImage } from '../hooks/ImageContext';
+const copy = {
+  en: {
+    allHotels: 'All Hotels', verified: 'Verified accommodations in Tuzla', priceRange: 'Price range', reviews: 'reviews', visitUs: 'Visit Us', added: 'Added', itinerary: 'Itinerary', rentalsTitle: 'Rental Offers', rentalsText: 'Direct booking rental places in Tuzla.', scanOrTap: 'Scan or tap to book', stayBadge: 'Stay in Tuzla', title: 'Accommodation', subtitle: 'Hotels, apartments, and travel links in one place.', sidebarHint: 'Use the sidebar for History, Map, Quest, Gallery, and Parking.', disclaimerTitle: 'Disclaimer', disclaimerBody: 'TuzlaTour is an informational guide. We are not responsible for bookings, reservations, or the service quality of the listed hotels and apartments. All reservations are made directly with the respective providers.',
+  },
+  bs: {
+    allHotels: 'Svi hoteli', verified: 'Verificirani smještaj u Tuzli', priceRange: 'Cijena', reviews: 'recenzija', visitUs: 'Posjetite nas', added: 'Dodano', itinerary: 'Plan', rentalsTitle: 'Apartmani Tuzla', rentalsText: 'Ponuda smještaja u Tuzli.', scanOrTap: 'Skeniraj ili dodirni za rezervaciju', stayBadge: 'Smještaj u Tuzli', title: 'Smještaj', subtitle: 'Hoteli, apartmani i putni linkovi na jednom mjestu.', sidebarHint: 'Koristi bočnu traku za historiju, mapu, quest, galeriju i parking.', disclaimerTitle: 'Izjava o odricanju odgovornosti', disclaimerBody: 'TuzlaTour je informativni vodič. Ne snosimo odgovornost za rezervacije, ugovaranje smještaja niti za kvalitet usluge navedenih hotela i apartmana. Sve rezervacije se vrše direktno kod odgovarajućih pružaoca usluga.',
+  },
+  de: {
+    allHotels: 'Alle Hotels', verified: 'Verifizierte Unterkünfte in Tuzla', priceRange: 'Preisspanne', reviews: 'Bewertungen', visitUs: 'Besuchen', added: 'Hinzugefügt', itinerary: 'Plan', rentalsTitle: 'Möblierte Wohnungen', rentalsText: 'Möblierte Wohnungen in Tuzla.', scanOrTap: 'Scannen oder tippen', stayBadge: 'Unterkunft in Tuzla', title: 'Unterkunft', subtitle: 'Hotels, Apartments und Reiselinks an einem Ort.', sidebarHint: 'Nutze die Seitenleiste für Geschichte, Karte, Quest, Galerie und Parken.', disclaimerTitle: 'Haftungsausschluss', disclaimerBody: 'TuzlaTour ist ein Informationsführer. Wir sind nicht verantwortlich für Buchungen, Reservierungen oder die Servicequalität der aufgeführten Hotels und Apartments. Alle Reservierungen werden direkt bei den jeweiligen Anbietern vorgenommen.',
+  },
+  tr: {
+    allHotels: 'Tüm Oteller', verified: 'Tuzla’da doğrulanmış konaklama seçenekleri', priceRange: 'Fiyat aralığı', reviews: 'yorum', visitUs: 'Ziyaret et', added: 'Eklendi', itinerary: 'Plan', rentalsTitle: 'Kiralık Daireler', rentalsText: 'Tuzla’da doğrudan rezervasyon yapılabilen kiralık yerler.', scanOrTap: 'Rezervasyon için tarayın veya dokunun', stayBadge: 'Tuzla’da Kal', title: 'Konaklama', subtitle: 'Oteller, daireler ve seyahat bağlantıları tek yerde.', sidebarHint: 'Tarih, Harita, Görev, Galeri ve Park için kenar çubuğunu kullanın.', disclaimerTitle: 'Sorumluluk Reddi', disclaimerBody: 'TuzlaTour bilgilendirme amaçlı bir rehberdir. Listelenen otel ve dairelerin rezervasyonlarından, konaklama anlaşmalarından veya hizmet kalitesinden sorumlu değiliz. Tüm rezervasyonlar doğrudan ilgili hizmet sağlayıcılarla yapılır.',
+  },
+} as const;
 
-/* ─── Hotel Cards Sub-component ─── */
+/* â”€â”€â”€ Hotel Cards Sub-component â”€â”€â”€ */
 const HotelCardsSection: React.FC<{ lang: Language }> = ({ lang }) => {
+  const t = copy[lang] ?? copy.en;
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
 
   const handleAddToItinerary = async (hotel: HotelData) => {
@@ -39,10 +54,10 @@ const HotelCardsSection: React.FC<{ lang: Language }> = ({ lang }) => {
       <div className="space-y-2 border-b border-blue-100 pb-6">
         <h2 className="text-3xl font-black text-blue-950 uppercase flex items-center gap-3">
           <Building2 className="w-8 h-8 text-blue-600" />
-          {lang === 'en' ? 'All Hotels' : lang === 'de' ? 'Alle Hotels' : 'Svi hoteli'}
+          {t.allHotels}
         </h2>
         <p className="text-blue-500/80 font-semibold uppercase text-xs tracking-[0.2em]">
-          {lang === 'en' ? 'Verified accommodations in Tuzla' : lang === 'de' ? 'Verifizierte Unterkünfte in Tuzla' : 'Verificirani smještaj u Tuzli'}
+          {t.verified}
         </p>
       </div>
 
@@ -105,7 +120,7 @@ const HotelCardsSection: React.FC<{ lang: Language }> = ({ lang }) => {
               <div className="flex items-center justify-between pt-4 border-t border-blue-50">
                 <div>
                   <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest">
-                    {lang === 'en' ? 'Price range' : lang === 'de' ? 'Preisspanne' : 'Cijena'}
+                    {t.priceRange}
                   </p>
                   <p className="font-black text-blue-950 text-sm">{hotel.priceRange}</p>
                 </div>
@@ -113,7 +128,7 @@ const HotelCardsSection: React.FC<{ lang: Language }> = ({ lang }) => {
                   {ratingDots(hotel.rating).map((filled, i) => (
                     <div key={i} className={`w-2 h-2 rounded-full ${filled ? 'bg-yellow-500' : 'bg-gray-200'}`} />
                   ))}
-                  <span className="text-[9px] font-bold text-blue-900/40 ml-1">{hotel.user_ratings_total} reviews</span>
+                  <span className="text-[9px] font-bold text-blue-900/40 ml-1">{hotel.user_ratings_total} {t.reviews}</span>
                 </div>
               </div>
 
@@ -126,7 +141,7 @@ const HotelCardsSection: React.FC<{ lang: Language }> = ({ lang }) => {
                     rel="noopener noreferrer"
                     className="flex-1 flex items-center justify-center gap-2 py-3 bg-blue-50 text-blue-600 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-sm"
                   >
-                    {lang === 'en' ? 'Visit Us' : lang === 'de' ? 'Besuchen' : 'Posjetite nas'}
+                    {t.visitUs}
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
                 )}
@@ -139,9 +154,9 @@ const HotelCardsSection: React.FC<{ lang: Language }> = ({ lang }) => {
                     }`}
                 >
                   {addedIds.has(hotel.name) ? (
-                    <><Check className="w-3.5 h-3.5" /> {lang === 'en' ? 'Added' : lang === 'de' ? 'Hinzugefügt' : 'Dodano'}</>
+                    <><Check className="w-3.5 h-3.5" /> {t.added}</>
                   ) : (
-                    <><Plus className="w-3.5 h-3.5" /> {lang === 'en' ? 'Itinerary' : lang === 'de' ? 'Plan' : 'Plan'}</>
+                    <><Plus className="w-3.5 h-3.5" /> {t.itinerary}</>
                   )}
                 </button>
               </div>
@@ -157,10 +172,10 @@ const HotelCardsSection: React.FC<{ lang: Language }> = ({ lang }) => {
 
           <div className="space-y-1">
             <h3 className="text-xl font-black text-blue-950 uppercase tracking-tight">
-              {lang === 'en' ? 'Rentals Offers' : lang === 'de' ? 'Möblierte Wohnungen' : lang === 'tr' ? 'Kiralık Daireler' : 'Apartmani Tuzla'}
+              {t.rentalsTitle}
             </h3>
             <p className="text-[11px] text-blue-600/70 font-bold leading-relaxed max-w-[240px]">
-              {lang === 'en' ? 'Direct booking rental places in Tuzla.' : lang === 'de' ? 'Möblierte Wohnungen in Tuzla.' : lang === 'tr' ? 'Tuzla\'da kiralık yerler için doğrudan rezervasyon.' : 'Ponuda smještaja u Tuzli.'}
+              {t.rentalsText}
             </p>
           </div>
 
@@ -178,7 +193,7 @@ const HotelCardsSection: React.FC<{ lang: Language }> = ({ lang }) => {
               />
             </div>
             <div className="px-5 py-2 rounded-full bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2 group-hover/qr:bg-blue-700 transition-colors">
-              {lang === 'en' ? 'Scan or tap to Book' : lang === 'de' ? 'Scannen oder tippen' : lang === 'tr' ? 'Rezervasyon için tarayın veya dokunun' : 'Skeniraj ili dodirni za rezervaciju'}
+              {t.scanOrTap}
               <ExternalLink className="w-3 h-3" />
             </div>
           </a>
@@ -193,6 +208,7 @@ interface AccommodationProps {
 }
 
 const Accommodation: React.FC<AccommodationProps> = ({ lang }) => {
+  const t = copy[lang] ?? copy.en;
   const { openGallery } = useImage();
 
   return (
@@ -200,17 +216,13 @@ const Accommodation: React.FC<AccommodationProps> = ({ lang }) => {
       <header className="text-center space-y-4">
         <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.24em] text-blue-700 shadow-sm">
           <Building2 className="h-4 w-4" />
-          {lang === 'en' ? 'Stay in Tuzla' : lang === 'de' ? 'Unterkunft in Tuzla' : 'Smještaj u Tuzli'}
+          {t.stayBadge}
         </div>
         <h1 className="text-4xl md:text-6xl font-black text-blue-950 uppercase tracking-tighter">
-          {lang === 'en' ? 'Accommodation' : lang === 'de' ? 'Unterkunft' : 'Smještaj'}
+          {t.title}
         </h1>
         <p className="text-blue-600 font-medium text-lg max-w-2xl mx-auto leading-relaxed">
-          {lang === 'en'
-            ? 'Hotels, apartments, and travel links in one place.'
-            : lang === 'de'
-              ? 'Hotels, Apartments und Reiselinks an einem Ort.'
-              : 'Hoteli, apartmani i putni linkovi na jednom mjestu.'}
+          {t.subtitle}
         </p>
       </header>
 
@@ -221,11 +233,7 @@ const Accommodation: React.FC<AccommodationProps> = ({ lang }) => {
       <section className="flex items-center gap-3 rounded-[2rem] border border-blue-100 bg-white px-5 py-4 text-sm text-blue-900 shadow-sm">
         <Globe className="h-5 w-5 text-blue-600" />
         <div className="leading-6">
-          {lang === 'en'
-            ? 'Use the sidebar for History, Map, Quest, Gallery, and Parking.'
-            : lang === 'de'
-              ? 'Nutze die Seitenleiste für Geschichte, Karte, Quest, Galerie und Parken.'
-              : 'Koristi bočnu traku za historiju, mapu, quest, galeriju i parking.'}
+          {t.sidebarHint}
         </div>
       </section>
 
@@ -233,14 +241,10 @@ const Accommodation: React.FC<AccommodationProps> = ({ lang }) => {
         <Info className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
         <div className="space-y-1">
           <p className="font-black uppercase tracking-widest text-[10px] text-amber-700">
-            {lang === 'en' ? 'Disclaimer' : lang === 'de' ? 'Haftungsausschluss' : 'Izjava o odricanju odgovornosti'}
+            {t.disclaimerTitle}
           </p>
           <p className="leading-relaxed font-medium">
-            {lang === 'en'
-              ? 'TuzlaTour is an informational guide. We are not responsible for bookings, reservations, or the service quality of the listed hotels and apartments. All reservations are made directly with the respective providers.'
-              : lang === 'de'
-                ? 'TuzlaTour ist ein Informationsführer. Wir sind nicht verantwortlich für Buchungen, Reservierungen oder die Servicequalität der aufgeführten Hotels und Apartments. Alle Reservierungen werden direkt bei den jeweiligen Anbietern vorgenommen.'
-                : 'TuzlaTour je informativni vodič. Ne snosimo odgovornost za rezervacije, ugovaranje smještaja niti za kvalitet usluge navedenih hotela i apartmana. Sve rezervacije se vrše direktno kod odgovarajućih pružaoca usluga.'}
+            {t.disclaimerBody}
           </p>
         </div>
       </section>

@@ -8,7 +8,7 @@ The Tuzla Virtual Tour Guide is an interactive web and mobile application design
 ## Key Features
 - **Interactive Map:** Displays the city with custom map tiles and points of interest.
 - **City Guide:** A detailed view of various tourist attractions, providing historical context, images, and locations.
-- **Quest System:** Gamified routes guiding users through the city with QR codes scanning for rewards. 
+- **NFT Rewards Quest System:** Gamified routes guiding users through the city with QR codes scanning for rewards. 
 
 ## Important Locations Context
 - **Panononica (Pannonian Lakes):** The main attraction, featuring artificial saltwater lakes right in the city center.

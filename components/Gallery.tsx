@@ -37,7 +37,7 @@ const Gallery: React.FC<GalleryProps> = ({ lang }) => {
         </div>
         <div className="mt-16 text-center">
           <p className="text-xl md:text-2xl font-quicksand font-bold text-slate-800 italic max-w-2xl mx-auto leading-relaxed">
-            "{t.galleryCharmText}"
+            &ldquo;{t.galleryCharmText}&rdquo;
           </p>
           <div className="mt-6 w-24 h-1 bg-gradient-to-r from-blue-400 to-blue-600 mx-auto rounded-full" />
         </div>

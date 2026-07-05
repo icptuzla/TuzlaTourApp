@@ -3,7 +3,7 @@ import { CheckCircle2, Circle, CreditCard, Plus, ShoppingBag, Trash2 } from 'luc
 import { Language } from '../types';
 import { Preferences } from '@capacitor/preferences';
 
-type Mode = 'expenses' | 'tasks' | 'itinerary';
+type Mode = 'expenses' | 'tasks' | 'itinerary' | 'threeDayPlan';
 
 type ExpenseItem = {
   id: number;
@@ -32,6 +32,73 @@ interface TaskManagerProps {
 }
 
 const storageKey = 'tuzla_task_manager_v1';
+
+const threeDayPlanText = `Dan 1: Dolazak i Prvi Koraci
+
+✈️ Slijetanje (Aerodrom Tuzla):
+• Otvorite Tuzla Tour Guide aplikaciju
+• Koristite tab "Taksi/Prevoz" za direktan poziv lokalnog taksi servisa do centra grada
+
+🏨 Smještaj:
+• Otvorite tab "Smještaj" (Accommodation Link)
+• Odaberite hotel, napravite poziv direktno iz aplikacije
+• Koristite "Smart Navigation" mapu da stignete do odabrane lokacije
+
+🍽️ Ručak:
+• Otvorite tab "Hrana"
+• Pronađite obrok po želji ili naručite dostavu direktno na vašu lokaciju
+
+🗺️ Upoznavanje grada:
+• Otvorite tab "Potraga" (Interactive Quest Map)
+• Pratite mapu do historijskih atrakcija (Freedom Square itd.)
+• Završite "igru" na lokacijama kako biste otključali digitalne popuste
+• Čuvajte popuste u svom TON novčaniku
+
+🌙 Večera: Povratak u hotelski restoran za večeru.
+
+Dan 2: Panonsko osvježenje i Stari Grad
+
+☀️ Jutarnje osvježenje:
+• Otvorite "Mapa" i uputite se ka Panonskim jezerima
+• Savjet: Dođite rano dok je voda najčistija
+• Cijena cjelodnevne ulaznice: 7.50 KM
+• Besplatno obiđite Muzej i Neolitsko sojeničko naselje
+
+🍽️ Večera i Desert:
+• Večerajte u restoranu Panonski Lovac
+• Za desert idite na Palačinkaru Bagi
+• Uključite navigaciju, skenirajte QR kod po dolasku
+• Ostvarite popust na porciju najboljih palačinaka na Balkanu
+
+🏛️ Stari Grad:
+• Prošetajte do spomenika "Ismet i Meša"
+• Potražite QR kod na lokaciji za posebno iznenađenje u aplikaciji!
+
+🌙 Povratak: Hotel
+
+Dan 3: Priroda, Parking i Shopping
+
+🌲 Priroda:
+• Otvorite tab "Mapa" i pokrenite navigaciju ka izletištu Ilinčica
+• Uživajte u adrenalinskom parku, šumi i hladovini
+
+🛍️ Shopping i Parking:
+• Otvorite tab "Parking" u aplikaciji
+• Pronađite najpovoljniju zonu za BCC (Bingo City Center)
+• Izvršite plaćanje putem SMS-a (odaberite trajanje: sat ili dan)
+• U tržnom centru Bingo koristite svoju kameru
+• Pronađite AR guided 3D model lopte
+• Skenirajte ga za osvajanje nove nagrade u aplikaciji
+
+⏰ Slobodno vrijeme:
+• Ostatak dana iskoristite za istraživanje grada po vašem izboru
+
+🏨 Hotel checkout
+• Pozovite Taxi ili potražite autobusku liniju u aplikaciji sa real time lokacijom koja vozi na aerodrom
+
+━━━━━━━━━━━━━━━━━━━━━
+
+HVALA NA POSJETI, DOĐITE NAM OPET!`;
 
 const copy = {
   en: {
@@ -262,6 +329,12 @@ const TaskManager: React.FC<TaskManagerProps> = ({ lang }) => {
             >
               {t.itinerary}
             </button>
+            <button
+              onClick={() => setView('threeDayPlan')}
+              className={`rounded-2xl px-6 py-4 text-base font-black transition-all ${view === 'threeDayPlan' ? 'bg-white text-blue-900 shadow-lg' : 'bg-white/10 text-white/80 backdrop-blur-md'}`}
+            >
+              3 Day Plan
+            </button>
           </div>
         </div>
 
@@ -442,6 +515,14 @@ const TaskManager: React.FC<TaskManagerProps> = ({ lang }) => {
                       </div>
                     ))
                   )}
+                </div>
+              </section>
+            ) : view === 'threeDayPlan' ? (
+              <section className="space-y-5">
+                <div className="rounded-[1.5rem] border border-blue-100 bg-white p-5 shadow-sm">
+                  <div className="whitespace-pre-wrap text-sm font-semibold leading-7 text-slate-700 sm:text-base">
+                    {threeDayPlanText}
+                  </div>
                 </div>
               </section>
             ) : null}

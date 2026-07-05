@@ -184,7 +184,7 @@ const Parking: React.FC<{ lang: Language }> = ({ lang }) => {
     const mapContainer = useRef<HTMLDivElement>(null);
     const map = useRef<maplibregl.Map | null>(null);
     const [selectedZone, setSelectedZone] = useState<Zone | null>(null);
-    const [viewMode, setViewMode] = useState<'zones' | 'lots'>('lots');
+    const [viewMode, setViewMode] = useState<'zones' | 'lots'>('zones');
     const [searchQuery, setSearchQuery] = useState("");
     const lotMarkers = useRef<maplibregl.Marker[]>([]);
     const [plate, setPlate] = useState("");

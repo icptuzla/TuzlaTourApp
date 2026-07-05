@@ -43,7 +43,7 @@ const History: React.FC<HistoryProps> = ({ lang }) => {
           {/* Tap-to-zoom hint */}
           <div className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-black/50 backdrop-blur-sm text-white/90 text-xs px-3 py-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none sm:flex hidden">
             <ZoomIn size={14} />
-            <span>Tap to zoom</span>
+            <span>{lang === 'de' ? 'Zum Zoomen tippen' : lang === 'tr' ? 'Yakınlaştırmak için dokunun' : lang === 'bs' ? 'Dodirnite za zum' : 'Tap to zoom'}</span>
           </div>
           {/* Mobile-visible hint icon */}
           <div className="absolute bottom-3 right-3 bg-black/40 backdrop-blur-sm text-white/80 p-2 rounded-full sm:hidden">
