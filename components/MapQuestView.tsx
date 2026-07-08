@@ -8,7 +8,7 @@ import { TUZLA_CENTER, LOCATIONS } from '../constants';
 import { tuzlaHotelData } from '../tuzlaHotelData';
 import { QrCode, Navigation, Gamepad2, CheckCircle2, Lock, Play, X, Trophy, Route, Compass, Landmark, Loader2, Clock, Footprints, Hotel as HotelIcon } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useDragControls, useMotionValue } from 'framer-motion';
 import { useNetwork } from '../hooks/useNetwork';
 import { useQuestRuntimePolicy } from '../hooks/useQuestRuntimePolicy';
 import { QuestQualityMode } from '../utils/questRuntimePolicy';
@@ -157,6 +157,10 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({
   const [routeTime, setRouteTime] = useState<number | null>(null);
   const [isRouteLoading, setIsRouteLoading] = useState(false);
   const [activeModalTab, setActiveModalTab] = useState<'poi' | 'hotel'>('poi');
+  const navHudBoundsRef = useRef<HTMLDivElement>(null);
+  const navHudDragControls = useDragControls();
+  const navHudX = useMotionValue(0);
+  const navHudY = useMotionValue(0);
 
   const scannerContainerId = "map-quest-reader";
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
@@ -166,6 +170,11 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({
   const isBalancedMode = policy.qualityLevel === 'balanced';
   const scannerFps = isUtilityMode ? 10 : (isBalancedMode ? 12 : 15);
   const scannerQrSize = isUtilityMode ? 220 : 250;
+
+  useEffect(() => {
+    navHudX.set(0);
+    navHudY.set(0);
+  }, [isNavigating, selectedNavTarget?.name, selectedNavTarget?.lat, selectedNavTarget?.lon, navHudX, navHudY]);
 
   const setupBuildings = (mapInstance: maplibregl.Map) => {
     try {
@@ -1379,6 +1388,7 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({
       <AnimatePresence>
         {isNavigating && selectedNavTarget && (
           <motion.div
+            ref={navHudBoundsRef}
             initial={{ y: 50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 50, opacity: 0 }}
@@ -1386,11 +1396,19 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({
           >
             <motion.div
               drag
+              dragControls={navHudDragControls}
+              dragListener={false}
+              dragConstraints={navHudBoundsRef}
+              dragElastic={0.08}
               dragMomentum={false}
-              className="w-full max-w-md pointer-events-auto cursor-grab active:cursor-grabbing bg-slate-950 border border-emerald-500/30 rounded-3xl p-5 shadow-2xl flex flex-col gap-4"
+              style={{ x: navHudX, y: navHudY }}
+              className="w-full max-w-md pointer-events-auto bg-slate-950 border border-emerald-500/30 rounded-3xl p-5 shadow-2xl flex flex-col gap-4 touch-none"
             >
               {/* Header Info */}
-              <div className="flex items-start justify-between">
+              <div
+                className="flex items-start justify-between cursor-grab active:cursor-grabbing select-none"
+                onPointerDown={(event) => navHudDragControls.start(event)}
+              >
                 <div className="flex gap-3">
                   <div className="p-3 bg-emerald-600/20 text-emerald-400 rounded-2xl flex items-center justify-center border border-emerald-500/20">
                     <Route size={24} className="animate-pulse" />
@@ -1405,6 +1423,7 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({
                   </div>
                 </div>
                 <button
+                  onPointerDown={(event) => event.stopPropagation()}
                   onClick={() => {
                     setIsNavigating(false);
                     setSelectedNavTarget(null);
