@@ -50,8 +50,10 @@ export function useGeoapifyRoute({
     reachedTriggeredRef.current = false; setHasReachedDestination(false);
 
     try {
-      const url = `https://api.geoapify.com/v1/routing?waypoints=${origin.lat},${origin.lng}|${destination.lat},${destination.lng}&mode=walk&details=instruction_details,elevation&apiKey=${apiKey}`;
-      const res = await fetch(url);
+      const url = `https://api.geoapify.com/v1/routing?waypoints=${origin.lng},${origin.lat}|${destination.lng},${destination.lat}&mode=walk&details=instruction_details,elevation&apiKey=${apiKey}`;
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 10000);
+      const res = await fetch(url, { signal: controller.signal }).finally(() => window.clearTimeout(timeoutId));
       if (!res.ok) throw new Error(`Geoapify Routing API returned status ${res.status}`);
       const data = await res.json();
       const feature = data.features?.[0];

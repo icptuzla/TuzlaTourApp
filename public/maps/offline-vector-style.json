@@ -7,21 +7,14 @@
   "sources": {
     "tuzla-pmtiles": {
       "type": "vector",
-      "url": "pmtiles:///maps/tiles/tuzla.pmtiles",
+      "url": "pmtiles:///maps/tuzla.pmtiles",
       "minzoom": 0,
-      "maxzoom": 18
-    },
-    "app-buildings": {
-      "type": "geojson",
-      "data": "/maps/tiles/TuzlaTourGuide.geojson"
-    },
-    "tour-data": {
-      "type": "geojson",
-      "data": "/maps/tour-data.geojson"
+      "maxzoom": 15
+   
     },
     "app-pois": {
       "type": "geojson",
-      "data": "/maps/tiles/poi.geojson"
+      "data": "/maps/poi.geojson"
     }
   },
   "layers": [
@@ -60,7 +53,7 @@
       "id": "pmtiles-roads",
       "type": "line",
       "source": "tuzla-pmtiles",
-      "source-layer": "transportation",
+      "source-layer": "roads",
       "minzoom": 0,
       "maxzoom": 18,
       "paint": {
@@ -80,7 +73,7 @@
       "id": "pmtiles-buildings",
       "type": "fill-extrusion",
       "source": "tuzla-pmtiles",
-      "source-layer": "building",
+      "source-layer": "buildings",
       "minzoom": 13,
       "maxzoom": 18,
       "paint": {

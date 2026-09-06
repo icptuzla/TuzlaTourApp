@@ -3,7 +3,7 @@ import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import * as pmtiles from 'pmtiles';
 import { motion, AnimatePresence } from 'framer-motion';
-import { QrCode, Navigation, Camera as CameraIcon, Route, Info, X, Compass, Landmark, Hotel as HotelIcon, Trophy, Lock, Layers, Check, ChevronUp, ChevronDown, MapPin } from 'lucide-react';
+import { QrCode, Navigation, Route, Info, X, Compass, Landmark, Hotel as HotelIcon, Trophy, Layers, Check, ChevronUp, ChevronDown } from 'lucide-react';
 import { AppFeatures } from '../utils/platform.ts';
 import { Language } from '../types.ts';
 import { TUZLA_CENTER, LOCATIONS } from '../constants.tsx';
@@ -44,7 +44,7 @@ const GEOAPIFY_API_KEY = '765d67152f78438bacd2c66f73665a91';
 const VITE_PROTOMAPS_CARTO_API = '78417d24f3c5d515';
 export const GEOAPIFY_MAPTILER_3D = `https://maps.geoapify.com/v1/styles/maptiler-3d/style.json?apiKey=${GEOAPIFY_API_KEY}`;
 export const CARTO_VOYAGER_STYLE = `https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json?apiKey=${VITE_PROTOMAPS_CARTO_API}`;
-export const OFFLINE_STYLE = '/maps/tiles/offline-vector-style.json';
+export const OFFLINE_STYLE = '/maps/offline-vector-style.json';
 
 const MAP_LAYER_OPTIONS = [
   { id: 'geoapify', name: { bs: 'Geoapify 3D (Primarna)', en: 'Geoapify 3D (Primary)' }, url: GEOAPIFY_MAPTILER_3D },
@@ -52,8 +52,7 @@ const MAP_LAYER_OPTIONS = [
   { id: 'offline', name: { bs: 'Lokalna PMTiles (Offline)', en: 'Local PMTiles (Offline)' }, url: OFFLINE_STYLE },
 ];
 
-const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRewards, onRewardFound, onToggleAR, navigationTarget, onClearNavigation, initialOpenScanner = false }) => {
-  const { policy } = useQuestRuntimePolicy(features);
+const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, unlockedRewards, onRewardFound, navigationTarget, onClearNavigation, initialOpenScanner = false }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const [pitch, setPitch] = useState<number>(55);
@@ -96,20 +95,18 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
     setActiveVictoryModal(null);
   };
 
-  const handleStartNavAndAR = (targetId: string, name: string, lat: number, lon: number) => {
+  const handleStartNavigation = (name: string, lat: number, lon: number) => {
     setSelectedNavTarget({ name, lat, lon });
     setIsNavigating(true);
-    setShowARGuide(true);
   };
 
-  const isOnline = useNetwork();
   const markersRef = useRef<{ [key: string]: maplibregl.Marker }>({});
   const userMarkerRef = useRef<maplibregl.Marker | null>(null);
   const gpsFilterRef = useRef(new AdaptiveLowPassFilter()); // PRO FIX: Instantiate filter
 
   useEffect(() => {
     (window as any).startNavigationFromPopup = (name: string, lat: number, lon: number) => {
-      handleStartNavAndAR(name, name, lat, lon);
+      handleStartNavigation(name, lat, lon);
     };
     return () => { delete (window as any).startNavigationFromPopup; };
   }, []);
@@ -178,7 +175,6 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
     });
     visibleTargets.forEach((target) => {
       const isUnlocked = unlockedRewards.includes(target.id);
-      const isCompletedFromPreviousPhase = ((currentPhase >= 2 && PHASE_1_POIS.includes(target.id)) || (currentPhase >= 3 && PHASE_2_POIS.includes(target.id)) || (currentPhase >= 4 && PHASE_3_POIS.includes(target.id)));
       const matchedLoc = LOCATIONS.find((l) => l.id === target.id || l.id.toLowerCase() === target.id.toLowerCase() || l.name.bs.toLowerCase().includes(target.name.bs.toLowerCase()) || l.name.en.toLowerCase().includes(target.name.en.toLowerCase()));
       const coords = QUEST_TARGET_COORDS[target.id] || (matchedLoc ? { lat: matchedLoc.coordinates[0], lon: matchedLoc.coordinates[1] } : null);
       if (!coords) return;
@@ -217,7 +213,7 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
     try {
       const ROUTE_MAP_KEY = ['63e8b34f44974d71', 'bc70aad63e5b56ba'].join('');
       const apiKey = (import.meta as any).env?.VITE_GEOAPIFY_ROUTING_API || (import.meta as any).env?.VITE_GEOAPIFY_STATIC_API || ROUTE_MAP_KEY;
-      const url = `https://api.geoapify.com/v1/routing?waypoints=${startLoc[1]},${startLoc[0]}|${target.lat},${target.lon}&mode=walk&apiKey=${apiKey}`;
+      const url = `https://api.geoapify.com/v1/routing?waypoints=${startLoc[0]},${startLoc[1]}|${target.lon},${target.lat}&mode=walk&apiKey=${apiKey}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error('Routing API request failed');
       const data = await res.json();
@@ -241,10 +237,10 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
       }
     } catch (error) {
       console.warn('Geoapify route fallback triggered:', error);
-      const distKm = getDistance(startLoc[0], startLoc[1], target.lat, target.lon);
+      const distKm = getDistance(startLoc[1], startLoc[0], target.lat, target.lon);
       const distMeters = distKm * 1000;
       setRouteDistance(distMeters); setRouteTime(distMeters / 1.4);
-      const lineGeoJson = { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'LineString', coordinates: [[startLoc[1], startLoc[0]], [target.lon, target.lat]] }, properties: {} }] };
+      const lineGeoJson = { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'LineString', coordinates: [[startLoc[0], startLoc[1]], [target.lon, target.lat]] }, properties: {} }] };
       if (map.current.getSource('route-source')) {
         (map.current.getSource('route-source') as maplibregl.GeoJSONSource).setData(lineGeoJson as any);
       } else {
@@ -256,7 +252,7 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
 
   useEffect(() => {
     if (isNavigating && selectedNavTarget && isLoaded) {
-      const start = userLocationRef.current || [TUZLA_CENTER[0], TUZLA_CENTER[1]];
+      const start = userLocationRef.current || [TUZLA_CENTER[1], TUZLA_CENTER[0]];
       calculateRoute(start, selectedNavTarget);
     } else { clearRoute(); }
   }, [isNavigating, selectedNavTarget, isLoaded]);
@@ -293,7 +289,7 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
 
     const smoothed = gpsFilterRef.current.update(rawLat, rawLng, distance);
     const latitude = smoothed.lat;
-    const longitude = smoothed.lng;
+    const longitude = smoothed.lng ?? rawLng;
 
     setUserLocation([latitude, longitude]);
     userLocationRef.current = [longitude, latitude];
@@ -374,42 +370,8 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
       {/* 3D Map Container */}
       <div
         ref={mapContainer}
-        style={{ height: showARGuide ? `${splitHeight}%` : '100%' }}
-        className={`w-full transition-all duration-75 relative overflow-hidden z-0 ${showARGuide ? 'flex-shrink-0 border-b border-amber-500/40 shadow-2xl' : 'flex-1'}`}
+        className="w-full flex-1 relative overflow-hidden z-0"
       />
-
-      {/* AR View Divider Drag Handle */}
-      {showARGuide && (
-        <div
-          onMouseDown={handleDragStart}
-          onTouchStart={handleDragStart}
-          className="h-3.5 w-full bg-slate-900/90 hover:bg-amber-500/40 active:bg-amber-500/60 cursor-ns-resize flex items-center justify-center border-y border-amber-500/40 z-40 shrink-0 transition-colors"
-          title="Drag to resize Map / AR Guide split view"
-        >
-          <div className="w-12 h-1 bg-amber-400/80 rounded-full" />
-        </div>
-      )}
-
-      {/* AR Guide Pass-Through Container */}
-      {showARGuide && (
-        <div
-          style={{ height: `calc(${100 - splitHeight}% - 14px)` }}
-          className="w-full relative flex flex-col bg-slate-950 overflow-hidden shadow-2xl shrink-0 z-10"
-        >
-          <div className="w-full h-full relative overflow-hidden">
-            <ARGuide
-              lang={lang}
-              features={features}
-              initialTarget={selectedNavTarget ? LOCATIONS.find(l => l.name.bs === selectedNavTarget.name || l.name.en === selectedNavTarget.name || l.id === selectedNavTarget.name) : null}
-              unlockedRewards={unlockedRewards}
-              onRewardFound={onRewardFound}
-              onNavigate={poi => {
-                handleStartNavAndAR(poi.id, poi.name[lang] || poi.name.bs, poi.coordinates[0], poi.coordinates[1]);
-              }}
-            />
-          </div>
-        </div>
-      )}
 
       {/* Victory Modals */}
       <AnimatePresence>
@@ -527,13 +489,13 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
       {/* Layer Menu Dropdown */}
       <AnimatePresence>
         {showLayerMenu && (
-          <motion.div initial={{ opacity: 0, y: 10, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.9 }} className="absolute z-30 w-64 p-3 bg-slate-900/95 backdrop-blur-2xl border border-blue-500/30 rounded-2xl shadow-2xl space-y-1.5 transition-all duration-150 left-3" style={showARGuide ? { bottom: `calc(${100 - splitHeight}% + 64px)` } : { bottom: '4.5rem' }}>
+          <motion.div initial={{ opacity: 0, y: 10, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.9 }} className="absolute z-30 w-64 p-3 bg-slate-900/95 backdrop-blur-2xl border border-blue-500/30 rounded-2xl shadow-2xl space-y-1.5 transition-all duration-150 left-3" style={{ bottom: '4.5rem' }}>
             <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-2 py-1 border-b border-white/5 flex items-center justify-between"><span>{lang === 'bs' ? 'Sloj Mape' : 'Map Layer'}</span><Layers size={12} className="text-blue-400" /></div>
             {MAP_LAYER_OPTIONS.map((layerOpt) => {
               const isSelected = activeStyle === layerOpt.url;
               return (
                 <button key={layerOpt.id} onClick={() => handleSwitchLayer(layerOpt.url)} className={`w-full px-3 py-2.5 rounded-xl text-xs font-bold text-left flex items-center justify-between transition-all ${isSelected ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30' : 'text-slate-300 hover:bg-white/5 hover:text-white'}`}>
-                  <span className="truncate">{layerOpt.name[lang] || layerOpt.name.bs}</span>
+                  <span className="truncate">{layerOpt.name[lang as 'bs' | 'en'] || layerOpt.name.bs}</span>
                   {isSelected && <Check size={14} className="shrink-0 text-white" />}
                 </button>
               );
@@ -545,7 +507,7 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
       {/* Quest Game Rules Dialog */}
       <AnimatePresence>
         {showRules && (
-          <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} className="absolute z-40 max-w-[300px] p-4 rounded-2xl bg-slate-900/95 backdrop-blur-xl border border-amber-500/40 shadow-2xl text-xs text-slate-200 left-3" style={showARGuide ? { bottom: `calc(${100 - splitHeight}% + 64px)` } : { bottom: '4.5rem' }}>
+          <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} className="absolute z-40 max-w-[300px] p-4 rounded-2xl bg-slate-900/95 backdrop-blur-xl border border-amber-500/40 shadow-2xl text-xs text-slate-200 left-3" style={{ bottom: '4.5rem' }}>
             <div className="flex items-center justify-between mb-2 pb-1 border-b border-white/10">
               <span className="font-black text-amber-400 uppercase tracking-wide text-[10px]">{QUEST_GAME_RULES[lang]?.title || QUEST_GAME_RULES.en.title}</span>
               <button onClick={() => setShowRules(false)} className="text-white/60 hover:text-white"><X size={14} /></button>
@@ -563,7 +525,7 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
               <div className="p-5 border-b border-white/10 flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-black text-white flex items-center gap-2"><Compass className="text-blue-400" size={22} />{lang === 'bs' ? 'Odaberi Odredište Potrage' : 'Choose Quest Target'}</h3>
-                  <p className="text-xs font-bold text-slate-400 mt-0.5">{lang === 'bs' ? 'Započni pješačku rutu i AR vodič do lokacije' : 'Start walking route & AR guide to location'}</p>
+                  <p className="text-xs font-bold text-slate-400 mt-0.5">{lang === 'bs' ? 'Započni pješačku GPS rutu do lokacije' : 'Start a walking GPS route to the location'}</p>
                 </div>
                 <button onClick={() => setIsPresetModalOpen(false)} className="p-2 hover:bg-white/10 rounded-full text-slate-400 hover:text-white transition-all"><X size={18} /></button>
               </div>
@@ -579,7 +541,7 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
                     const coords = QUEST_TARGET_COORDS[target.id];
                     const title = target.name[lang] || target.name.bs;
                     return (
-                      <button key={target.id} onClick={() => { if (coords) { handleStartNavAndAR(target.id, title, coords.lat, coords.lon); setIsPresetModalOpen(false); } }} className="w-full p-3.5 bg-white/5 hover:bg-amber-500/20 hover:border-amber-500/50 border border-white/5 rounded-2xl transition-all flex items-center justify-between group text-left">
+                      <button key={target.id} onClick={() => { if (coords) { handleStartNavigation(title, coords.lat, coords.lon); setIsPresetModalOpen(false); } }} className="w-full p-3.5 bg-white/5 hover:bg-amber-500/20 hover:border-amber-500/50 border border-white/5 rounded-2xl transition-all flex items-center justify-between group text-left">
                         <div className="flex items-center gap-3.5">
                           <img src={target.Image} alt={title} className="w-12 h-12 rounded-xl object-cover border border-white/10 shadow-md" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
                           <div>
@@ -587,17 +549,17 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
                             <span className={`text-[10px] uppercase font-black tracking-wider ${isUnlocked ? 'text-amber-400' : 'text-blue-400/80'}`}>{isUnlocked ? '★ ' + (lang === 'bs' ? 'Otključano' : 'Unlocked') : '🔒 ' + (lang === 'bs' ? 'Zaključano' : 'Locked')}</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2"><span className="text-xs font-bold text-amber-400 group-hover:underline">{lang === 'bs' ? 'Navigiraj & AR' : 'Navigate & AR'}</span><Route size={18} className="text-amber-400 group-hover:translate-x-1 transition-all" /></div>
+                        <div className="flex items-center gap-2"><span className="text-xs font-bold text-amber-400 group-hover:underline">{lang === 'bs' ? 'Navigacija' : 'Navigate'}</span><Route size={18} className="text-amber-400 group-hover:translate-x-1 transition-all" /></div>
                       </button>
                     );
                   })
                 ) : activeModalTab === 'poi' ? (
                   ROUTE_POI_PRESETS.map((poi, idx) => (
-                    <button key={idx} onClick={() => { handleStartNavAndAR(poi.name.en, poi.name[lang] ?? poi.name.en, poi.lat, poi.lon); setIsPresetModalOpen(false); }} className="w-full p-3.5 bg-white/5 hover:bg-blue-600/20 hover:border-blue-500/50 border border-white/5 rounded-2xl transition-all flex items-center justify-between group text-left">
+                    <button key={idx} onClick={() => { handleStartNavigation(poi.name[lang as 'bs' | 'en'] ?? poi.name.en, poi.lat, poi.lon); setIsPresetModalOpen(false); }} className="w-full p-3.5 bg-white/5 hover:bg-blue-600/20 hover:border-blue-500/50 border border-white/5 rounded-2xl transition-all flex items-center justify-between group text-left">
                       <div className="flex items-center gap-3.5">
                         <div className="p-3 bg-blue-500/10 text-blue-400 rounded-xl group-hover:bg-blue-500 group-hover:text-white transition-all"><Landmark size={20} /></div>
                         <div>
-                          <h4 className="font-extrabold text-sm text-white group-hover:text-blue-300 transition-colors">{poi.name[lang] ?? poi.name.en}</h4>
+                          <h4 className="font-extrabold text-sm text-white group-hover:text-blue-300 transition-colors">{poi.name[lang as 'bs' | 'en'] ?? poi.name.en}</h4>
                           <span className="text-[10px] uppercase font-bold tracking-wider text-blue-400/80">{poi.category}</span>
                         </div>
                       </div>
@@ -606,7 +568,7 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
                   ))
                 ) : (
                   TUZLA_HOTELS.map((hotel, idx) => (
-                    <button key={idx} onClick={() => { handleStartNavAndAR(hotel.name, hotel.name, hotel.latitude, hotel.longitude); setIsPresetModalOpen(false); }} className="w-full p-3.5 bg-white/5 hover:bg-blue-600/20 hover:border-blue-500/50 border border-white/5 rounded-2xl transition-all flex items-center justify-between group text-left">
+                    <button key={idx} onClick={() => { handleStartNavigation(hotel.name, hotel.latitude, hotel.longitude); setIsPresetModalOpen(false); }} className="w-full p-3.5 bg-white/5 hover:bg-blue-600/20 hover:border-blue-500/50 border border-white/5 rounded-2xl transition-all flex items-center justify-between group text-left">
                       <div className="flex items-center gap-3.5">
                         <div className="p-3 bg-blue-500/10 text-blue-400 rounded-xl group-hover:bg-blue-500 group-hover:text-white transition-all"><HotelIcon size={20} /></div>
                         <div>

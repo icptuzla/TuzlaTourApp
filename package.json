@@ -29,6 +29,7 @@
     "@emotion/is-prop-valid": "^1.4.0",
     "@google/genai": "^2.19.0",
     "@ionic/react": "^8.8.2",
+    "@makina-corpus/maplibre-offline-pmtiles": "^2.1.1",
     "@maplibre/geojson-vt": "^6.1.1",
     "@solana/kit": "^7.0.0",
     "@solana/wallet-adapter-react": "^0.15.39",

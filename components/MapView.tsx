@@ -1,10 +1,11 @@
 import React, { useRef, useEffect, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { OfflinePlugin, OFFLINE_STATUS } from '@makina-corpus/maplibre-offline-pmtiles';
 import { Language } from '../types';
 import { TUZLA_CENTER } from '../constants';
 import { AppFeatures } from '../utils/platform';
-import { Search, X, Loader2, Navigation, Landmark, Compass, Route, Clock, Footprints, Trophy, Lock, QrCode } from 'lucide-react';
+import { Search, X, Loader2, Navigation, Landmark, Compass, Route, Clock, Footprints, Trophy, Lock, QrCode, Layers, Check } from 'lucide-react';
 
 import { useNetwork } from '../hooks/useNetwork';
 import { tuzlaHotelData } from '../tuzlaHotelData';
@@ -23,8 +24,46 @@ interface MapViewProps {
 const GEO_MAP_KEY = ['65090a03070e4e18', '98694f7a18ba415b'].join('');
 const ROUTE_MAP_KEY = ['63e8b34f44974d71', 'bc70aad63e5b56ba'].join('');
 
+const OFFLINE_MAP_NAME = 'tuzla-city-v1';
+const OFFLINE_MAP_URL = '/maps/tuzla.pmtiles';
+const OFFLINE_MAP_STYLE_URL = '/maps/offline-vector-style.json';
+const OFFLINE_MAP_READY_KEY = 'tuzla.offline-map.ready.v1';
 const ONLINE_STYLE = `https://maps.geoapify.com/v1/styles/osm-liberty/style.json?apiKey=${import.meta.env.VITE_GEOAPIFY_MAP_TILES_API || import.meta.env.VITE_GEOAPIFY_STATIC_API || GEO_MAP_KEY}`;
 const ONLINE_TUZLATOUR = `https://maps.geoapify.com/v1/styles/osm-liberty/style.json?apiKey=${import.meta.env.VITE_GEOAPIFY_MAP_TILES_API || import.meta.env.VITE_GEOAPIFY_STATIC_API || GEO_MAP_KEY}`;
+
+OfflinePlugin.registerProtocol(maplibregl);
+const offlinePlugin = new OfflinePlugin();
+const EMPTY_MAP_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {},
+  layers: [{ id: 'offline-background', type: 'background', paint: { 'background-color': '#0f172a' } }],
+};
+
+const MAP_LAYER_OPTIONS = [
+  { id: 'geoapify', name: { bs: 'Geoapify OSM (Online)', en: 'Geoapify OSM (Online)' }, url: ONLINE_STYLE },
+  { id: 'offline', name: { bs: 'Lokalna PMTiles (Offline)', en: 'Local PMTiles (Offline)' }, url: 'offline' },
+];
+
+const loadOfflineMap = async (mapInstance: maplibregl.Map): Promise<void> => {
+  const statusHandler = (status: { code: OFFLINE_STATUS; progress?: number | string }) => {
+    if (status.code === OFFLINE_STATUS.PROGRESS) console.info('Offline map:', status.progress);
+  };
+
+  if (localStorage.getItem(OFFLINE_MAP_READY_KEY) !== 'true') {
+    const styleResponse = await fetch(OFFLINE_MAP_STYLE_URL);
+    if (!styleResponse.ok) throw new Error(`Offline style request failed: ${styleResponse.status}`);
+    const style = await styleResponse.json();
+    const pmtilesStyle = {
+      ...style,
+      sources: {},
+      layers: style.layers.filter((layer: { type: string; source?: string }) => layer.type === 'background' || layer.source === 'tuzla-pmtiles'),
+    };
+    await offlinePlugin.downloadMap(OFFLINE_MAP_URL, OFFLINE_MAP_NAME, statusHandler, pmtilesStyle);
+    localStorage.setItem(OFFLINE_MAP_READY_KEY, 'true');
+  }
+
+  await offlinePlugin.loadMap(mapInstance, OFFLINE_MAP_NAME, statusHandler);
+};
 interface RoutePoiPreset {
   name: Partial<Record<Language, string>> & { en: string; bs: string };
   lat: number;
@@ -125,6 +164,8 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
   const map = useRef<maplibregl.Map | null>(null);
   const userMarker = useRef<maplibregl.Marker | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [activeStyle, setActiveStyle] = useState<string>(navigator.onLine ? ONLINE_STYLE : 'offline');
+  const [showLayerMenu, setShowLayerMenu] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   // Keep a ref to the latest location so calculateRoute can read it
@@ -146,6 +187,33 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
   const [routeTime, setRouteTime] = useState<number | null>(null);
   const [isRouteLoading, setIsRouteLoading] = useState(false);
   const [activeModalTab, setActiveModalTab] = useState<'poi' | 'hotel' | 'qrcode'>('poi');
+
+  const handleSwitchLayer = (styleUrl: string) => {
+    if (!map.current || activeStyle === styleUrl) {
+      setShowLayerMenu(false);
+      return;
+    }
+
+    setActiveStyle(styleUrl);
+    setShowLayerMenu(false);
+
+    if (styleUrl === 'offline') {
+      setIsLoaded(false);
+      map.current.setStyle(EMPTY_MAP_STYLE);
+      map.current.once('style.load', () => {
+        void loadOfflineMap(map.current!).then(() => setIsLoaded(true)).catch((error) => {
+          console.error('Offline PMTiles layer failed to load:', error);
+          setActiveStyle(ONLINE_STYLE);
+          map.current?.setStyle(ONLINE_STYLE);
+        });
+      });
+      return;
+    }
+
+    setIsLoaded(false);
+    map.current.setStyle(styleUrl);
+    map.current.once('style.load', () => setIsLoaded(true));
+  };
 
   // Expose global callback for Mapbox popup navigation clicks
   useEffect(() => {
@@ -415,7 +483,7 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
 
     map.current = new maplibregl.Map({
       container: mapContainer.current,
-      style: ONLINE_STYLE,
+      style: navigator.onLine ? ONLINE_STYLE : EMPTY_MAP_STYLE,
       center: [TUZLA_CENTER[1], TUZLA_CENTER[0]],
       zoom: 16,
       minZoom: 0,
@@ -424,39 +492,13 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
       bearing: 0
     });
 
-    map.current.on('load', () => {
-      setIsLoaded(true);
-
-      map.current?.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'bottom-right');
-
-      // Apply custom paint properties for osm-liberty style
+    map.current.on('load', async () => {
       try {
-        map.current?.setPaintProperty('background', 'background-color', '#e5eade');
-        map.current?.setPaintProperty('park', 'fill-color', '#cdf0aa');
-        map.current?.setPaintProperty('park_outline', 'line-color', '#bbe592');
-        map.current?.setPaintProperty('landuse_residential', 'fill-color', 'rgba(227,207,180,0.49)');
-        map.current?.setPaintProperty('landcover_wood', 'fill-color', 'rgba(113,191,67,0.7)');
-        map.current?.setPaintProperty('landcover_grass', 'fill-color', '#a8d78c');
-        map.current?.setPaintProperty('landuse_cemetery', 'fill-color', '#e2e8d0');
-        map.current?.setPaintProperty('landuse_hospital', 'fill-color', '#f4c8de');
-        map.current?.setPaintProperty('landuse_school', 'fill-color', '#f8dada');
-        map.current?.setLayoutProperty('waterway_tunnel', 'visibility', 'none');
-        map.current?.setPaintProperty('road_minor_casing', 'line-color', '#000000');
-        map.current?.setPaintProperty('road_minor_casing', 'line-width', { "base": 1.2, "stops": [[12, 0.24999999999999986], [13, 0.4999999999999997], [14, 1.999999999999999], [20, 10]] });
-        map.current?.setPaintProperty('road_secondary_tertiary_casing', 'line-color', '#f0bb50');
-        map.current?.setPaintProperty('road_trunk_primary_casing', 'line-color', '#e69249');
-        map.current?.setPaintProperty('road_trunk_primary_casing', 'line-width', { "base": 1.2, "stops": [[5, 0.5090909090909089], [6, 0.8909090909090907], [7, 2.2272727272727266], [20, 28]] });
-        map.current?.setPaintProperty('road_path_pedestrian', 'line-color', '#f8ba94');
-        map.current?.setPaintProperty('road_path_pedestrian', 'line-width', { "base": 1.2, "stops": [[14, 0.4], [20, 4]] });
-        map.current?.setPaintProperty('road_motorway_link', 'line-color', '#f8c47e');
-        map.current?.setPaintProperty('road_service_track', 'line-color', '#cfcfcf');
-        map.current?.setPaintProperty('road_link', 'line-color', '#f6e49b');
-        map.current?.setPaintProperty('road_minor', 'line-width', { "base": 1.2, "stops": [[13.5, 0], [14, 2.7777777777777777], [20, 20]] });
-        map.current?.setPaintProperty('road_secondary_tertiary', 'line-color', '#fff186');
-        map.current?.setPaintProperty('road_trunk_primary', 'line-color', '#f2c860');
-        map.current?.setPaintProperty('road_motorway', 'line-color', '#eea33e');
-      } catch (err) {
-        console.warn('⚠️ MapView: Some style refinements could not be applied.', err);
+        if (!navigator.onLine) await loadOfflineMap(map.current!);
+        setIsLoaded(true);
+        map.current?.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'bottom-right');
+      } catch (error) {
+        console.error('Offline PMTiles map failed to load:', error);
       }
 
       // Add Hotel Markers
@@ -492,6 +534,15 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
 
     map.current.on('error', (e) => {
       console.warn('Map error:', e.error?.message);
+      if (navigator.onLine && activeStyle === ONLINE_STYLE && map.current) {
+        setActiveStyle('offline');
+        map.current.setStyle(EMPTY_MAP_STYLE);
+        map.current.once('style.load', () => {
+          void loadOfflineMap(map.current!).then(() => setIsLoaded(true)).catch((offlineError) => {
+            console.error('Online and offline map styles failed:', offlineError);
+          });
+        });
+      }
     });
 
     return () => {
@@ -622,6 +673,45 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
         </button>
       </div>
 
+      {/* Map Layer Switcher */}
+      <div className="absolute bottom-6 left-3 sm:left-6 z-[150]">
+        <button
+          onClick={() => setShowLayerMenu((previous) => !previous)}
+          className="map-action-btn w-10 h-10 sm:w-14 sm:h-14 bg-slate-900/90 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-2xl border border-blue-400/40 flex items-center justify-center text-blue-300 hover:text-white hover:border-blue-300 active:scale-95 transition-all"
+          title={lang === 'bs' ? 'Promijeni sloj mape' : 'Switch map layer'}
+        >
+          <Layers size={20} />
+        </button>
+        <AnimatePresence>
+          {showLayerMenu && (
+            <motion.div
+              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.95 }}
+              className="absolute bottom-12 sm:bottom-16 left-0 w-64 p-3 bg-slate-900/95 backdrop-blur-2xl border border-blue-500/30 rounded-2xl shadow-2xl space-y-1.5"
+            >
+              <div className="flex items-center justify-between px-2 py-1 border-b border-white/10 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                <span>{lang === 'bs' ? 'Sloj mape' : 'Map layer'}</span>
+                <Layers size={12} className="text-blue-400" />
+              </div>
+              {MAP_LAYER_OPTIONS.map((layerOption) => {
+                const isSelected = activeStyle === layerOption.url;
+                return (
+                  <button
+                    key={layerOption.id}
+                    onClick={() => handleSwitchLayer(layerOption.url)}
+                    className={`w-full px-3 py-2.5 rounded-xl text-xs font-bold text-left flex items-center justify-between transition-all ${isSelected ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30' : 'text-slate-300 hover:bg-white/5 hover:text-white'}`}
+                  >
+                    <span>{layerOption.name[lang as 'bs' | 'en'] || layerOption.name.bs}</span>
+                    {isSelected && <Check size={14} />}
+                  </button>
+                );
+              })}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
       {/* Floating Navigation Button (top-right) */}
       <div className="absolute top-3 sm:top-6 right-3 sm:right-6 flex flex-col gap-2 sm:gap-3 z-[150]">
         <button
@@ -730,7 +820,7 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
                       key={idx}
                       onClick={() => {
                         setSelectedTarget({
-                          name: poi.name[lang] ?? poi.name.en,
+                          name: poi.name[lang as 'bs' | 'en'] ?? poi.name.en,
                           lat: poi.lat,
                           lon: poi.lon
                         });
@@ -745,7 +835,7 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
                         </div>
                         <div>
                           <h4 className="font-extrabold text-white group-hover:text-blue-300 transition-colors">
-                            {poi.name[lang] ?? poi.name.en}
+                            {poi.name[lang as 'bs' | 'en'] ?? poi.name.en}
                           </h4>
                           <span className="text-[10px] uppercase font-bold tracking-wider text-blue-400/80">
                             {poi.category}
