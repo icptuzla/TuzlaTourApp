@@ -9,12 +9,18 @@
       "type": "vector",
       "url": "pmtiles:///maps/tuzla.pmtiles",
       "minzoom": 0,
-      "maxzoom": 15
-   
+      "maxzoom": 18
     },
     "app-pois": {
       "type": "geojson",
       "data": "/maps/poi.geojson"
+    },
+    "tour-data": {
+      "type": "geojson",
+      "data": {
+        "type": "FeatureCollection",
+        "features": []
+      }
     }
   },
   "layers": [
@@ -22,7 +28,7 @@
       "id": "background",
       "type": "background",
       "paint": {
-        "background-color": "#0f172a"
+        "background-color": "#cceb94"
       }
     },
     {
@@ -33,8 +39,8 @@
       "minzoom": 0,
       "maxzoom": 18,
       "paint": {
-        "fill-color": "#1e293b",
-        "fill-opacity": 0.6
+        "fill-color": "#d1c88c",
+        "fill-opacity": 0.5
       }
     },
     {
@@ -45,8 +51,50 @@
       "minzoom": 0,
       "maxzoom": 18,
       "paint": {
-        "fill-color": "#0284c7",
+        "fill-color": "#2891e0",
         "fill-opacity": 0.8
+      }
+    },
+    {
+      "id": "pmtiles-waterways",
+      "type": "line",
+      "source": "tuzla-pmtiles",
+      "source-layer": "water",
+      "minzoom": 8,
+      "maxzoom": 18,
+      "filter": ["==", "$type", "LineString"],
+      "paint": {
+        "line-color": "#2891e0",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.8, 14, 2, 18, 5],
+        "line-opacity": 0.55
+      }
+    },
+    {
+      "id": "pmtiles-roads-casing",
+      "type": "line",
+      "source": "tuzla-pmtiles",
+      "source-layer": "roads",
+      "minzoom": 0,
+      "maxzoom": 18,
+      "paint": {
+        "line-color": "#b28b62",
+        "line-width": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          0,
+          0.5,
+          10,
+          2.5,
+          14,
+          4.5,
+          18,
+          12
+        ]
       }
     },
     {
@@ -54,19 +102,19 @@
       "type": "line",
       "source": "tuzla-pmtiles",
       "source-layer": "roads",
-      "minzoom": 0,
+      "minzoom": 3,
       "maxzoom": 18,
       "paint": {
-        "line-color": "#334155",
-        "line-width": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          0, 0.5,
-          10, 1.5,
-          14, 3,
-          18, 8
-        ]
+        "line-color": [
+          "match",
+          ["get", "kind"],
+          "highway", "#f2c879",
+          "major_road", "#f7d78d",
+          "minor_road", "#fff4d6",
+          "path", "#d8c7a6",
+          "#eadcc4"
+        ],
+        "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.5, 10, 1.2, 14, 2.5, 18, 7]
       }
     },
     {
@@ -77,40 +125,32 @@
       "minzoom": 13,
       "maxzoom": 18,
       "paint": {
-        "fill-extrusion-color": "#334155",
-        "fill-extrusion-height": ["coalesce", ["get", "render_height"], ["get", "height"], 12],
-        "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], ["get", "min_height"], 0],
-        "fill-extrusion-opacity": 0.8
-      }
-    },
-    {
-      "id": "app-buildings-3d",
-      "type": "fill-extrusion",
-      "source": "app-buildings",
-      "minzoom": 13,
-      "maxzoom": 18,
-      "paint": {
-        "fill-extrusion-color": [
-          "interpolate",
-          ["linear"],
-          ["coalesce", ["get", "height"], 14],
-          0, "#3b82f6",
-          15, "#1d4ed8",
-          30, "#1e40af",
-          60, "#1e3a8a"
-        ],
+        "fill-extrusion-color": "#dbdad7",
         "fill-extrusion-height": [
           "coalesce",
-          ["get", "height"],
-          14
+          [
+            "get",
+            "render_height"
+          ],
+          [
+            "get",
+            "height"
+          ],
+          12
         ],
         "fill-extrusion-base": [
           "coalesce",
-          ["get", "min_height"],
+          [
+            "get",
+            "render_min_height"
+          ],
+          [
+            "get",
+            "min_height"
+          ],
           0
         ],
-        "fill-extrusion-opacity": 0.85,
-        "fill-extrusion-vertical-gradient": true
+        "fill-extrusion-opacity": 0.8
       }
     },
     {
@@ -133,37 +173,6 @@
           1
         ]
       }
-    },
-    {
-      "id": "tour-points",
-      "type": "circle",
-      "source": "tour-data",
-      "minzoom": 0,
-      "maxzoom": 18,
-      "filter": [
-        "==",
-        "$type",
-        "Point"
-      ],
-      "paint": {
-        "circle-radius": 5,
-        "circle-color": "#8b5cf6",
-        "circle-stroke-width": 2,
-        "circle-stroke-color": "#ffffff"
-      }
-    },
-    {
-      "id": "poi-icons",
-      "type": "circle",
-      "source": "app-pois",
-      "minzoom": 0,
-      "maxzoom": 18,
-      "paint": {
-        "circle-radius": 8,
-        "circle-color": "#3b82f6",
-        "circle-stroke-width": 2,
-        "circle-stroke-color": "#ffffff"
-      }
-    }
-  ]
-}
+   }   
+  ] 
+  }

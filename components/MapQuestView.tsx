@@ -19,7 +19,7 @@ import ARGuide from './ARGuide.tsx';
 
 export interface MapQuestViewProps {
   lang: Language; features: AppFeatures; unlockedRewards: string[];
-  onRewardFound: (id: string) => void; onToggleAR: () => void;
+  onRewardFound: (id: string) => void;
   navigationTarget?: any | null; onClearNavigation?: () => void; initialOpenScanner?: boolean;
 }
 
@@ -52,7 +52,7 @@ const MAP_LAYER_OPTIONS = [
   { id: 'offline', name: { bs: 'Lokalna PMTiles (Offline)', en: 'Local PMTiles (Offline)' }, url: OFFLINE_STYLE },
 ];
 
-const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, unlockedRewards, onRewardFound, navigationTarget, onClearNavigation, initialOpenScanner = false }) => {
+const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRewards, onRewardFound, navigationTarget, onClearNavigation, initialOpenScanner = false }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const [pitch, setPitch] = useState<number>(55);
@@ -98,6 +98,15 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, unlockedRewards, onRe
   const handleStartNavigation = (name: string, lat: number, lon: number) => {
     setSelectedNavTarget({ name, lat, lon });
     setIsNavigating(true);
+  };
+
+  const handleToggleARMode = () => {
+    if (!showARGuide && isNavigating) {
+      setIsNavigating(false);
+      setSelectedNavTarget(null);
+      clearRoute();
+    }
+    setShowARGuide(previous => !previous);
   };
 
   const markersRef = useRef<{ [key: string]: maplibregl.Marker }>({});
@@ -188,7 +197,7 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, unlockedRewards, onRe
 
       el.innerHTML = `<div class="relative flex items-center justify-center cursor-pointer group" title="${title}"><div class="w-10 h-10 rounded-2xl flex items-center justify-center shadow-2xl transition-all border-2" style="background-color: ${customPoiColor}; border-color: ${isUnlocked ? '#fef08a' : '#ffffff'}; box-shadow: 0 0 12px ${customPoiColor};"><span class="text-xs font-black text-white">${isUnlocked ? '★' : '🔒'}</span></div><div class="absolute -bottom-1 w-2.5 h-2.5 rotate-45 rounded-sm" style="background-color: ${customPoiColor};"></div></div>`;
       const marker = new maplibregl.Marker(el).setLngLat([coords.lon, coords.lat]).addTo(map.current!);
-      const popupHtml = `<div style="font-family: 'Quicksand', sans-serif; padding: 10px; background: #090d16; border-radius: 16px; color: white; width: 220px; border: 1px solid ${customPoiColor}; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7);"><div style="position: relative; overflow: hidden; border-radius: 10px; height: 100px; margin-bottom: 8px; background: #1e293b;"><img src="${imageUrl}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400'"/><div style="position: absolute; top: 4px; right: 4px; background: ${isUnlocked ? customPoiColor : 'rgba(15, 23, 42, 0.9)'}; color: #ffffff; padding: 2px 6px; border-radius: 8px; font-weight: 900; font-size: 9px;">${isUnlocked ? '★ ' + (lang === 'bs' ? 'Otključano' : 'Unlocked') : '🔒 ' + (lang === 'bs' ? 'Zaključano' : 'Locked')}</div></div><h4 style="font-weight: 800; font-size: 13px; margin: 0 0 4px 0; color: #f8fafc; line-height: 1.2;">${title}</h4><p style="font-size: 10px; margin: 0 0 10px 0; color: #94a3b8; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${description}</p><div style="display: flex; gap: 6px;"><button onclick="window.startNavigationFromPopup('${title.replace(/'/g, "\\'")}', ${coords.lat}, ${coords.lon})" style="width: 100%; background: ${customPoiColor}; border: none; border-radius: 10px; color: white; padding: 7px 0; font-weight: 800; font-size: 10px; cursor: pointer; font-family: 'Quicksand', sans-serif; box-shadow: 0 4px 12px ${customPoiColor}66;">${lang === 'bs' ? '🧭 Navigacija & AR' : '🧭 Navigate & AR'}</button></div></div>`;
+      const popupHtml = `<div style="font-family: 'Quicksand', sans-serif; padding: 10px; background: #090d16; border-radius: 16px; color: white; width: 220px; border: 1px solid ${customPoiColor}; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7);"><div style="position: relative; overflow: hidden; border-radius: 10px; height: 100px; margin-bottom: 8px; background: #1e293b;"><img src="${imageUrl}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400'"/><div style="position: absolute; top: 4px; right: 4px; background: ${isUnlocked ? customPoiColor : 'rgba(15, 23, 42, 0.9)'}; color: #ffffff; padding: 2px 6px; border-radius: 8px; font-weight: 900; font-size: 9px;">${isUnlocked ? '★ ' + (lang === 'bs' ? 'Otključano' : 'Unlocked') : '🔒 ' + (lang === 'bs' ? 'Zaključano' : 'Locked')}</div></div><h4 style="font-weight: 800; font-size: 13px; margin: 0 0 4px 0; color: #f8fafc; line-height: 1.2;">${title}</h4><p style="font-size: 10px; margin: 0 0 10px 0; color: #94a3b8; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${description}</p><div style="display: flex; gap: 6px;"><button onclick="window.startNavigationFromPopup('${title.replace(/'/g, "\\'")}', ${coords.lat}, ${coords.lon})" style="width: 100%; background: ${customPoiColor}; border: none; border-radius: 10px; color: white; padding: 7px 0; font-weight: 800; font-size: 10px; cursor: pointer; font-family: 'Quicksand', sans-serif; box-shadow: 0 4px 12px ${customPoiColor}66;">${lang === 'bs' ? '🧭 Navigacija' : '🧭 Navigate'}</button></div></div>`;
       const popup = new maplibregl.Popup({ offset: 25, closeButton: false, maxWidth: '240px' }).setHTML(popupHtml);
       marker.setPopup(popup);
       markersRef.current[target.id] = marker;
@@ -370,8 +379,38 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, unlockedRewards, onRe
       {/* 3D Map Container */}
       <div
         ref={mapContainer}
-        className="w-full flex-1 relative overflow-hidden z-0"
+        style={{ height: showARGuide ? `${splitHeight}%` : '100%' }}
+        className={`w-full relative overflow-hidden z-0 ${showARGuide ? 'flex-shrink-0 border-b border-amber-500/40 shadow-2xl' : 'flex-1'}`}
       />
+
+      {showARGuide && (
+        <>
+          <div
+            onMouseDown={handleDragStart}
+            onTouchStart={handleDragStart}
+            className="h-3.5 w-full bg-slate-900/90 hover:bg-amber-500/40 active:bg-amber-500/60 cursor-ns-resize flex items-center justify-center border-y border-amber-500/40 z-40 shrink-0 transition-colors"
+            title={lang === 'bs' ? 'Povuci za promjenu veličine mape i AR vodiča' : 'Drag to resize map and AR guide'}
+          >
+            <div className="w-12 h-1 bg-amber-400/80 rounded-full" />
+          </div>
+          <div
+            style={{ height: `calc(${100 - splitHeight}% - 14px)` }}
+            className="w-full relative flex flex-col bg-slate-950 overflow-hidden shadow-2xl shrink-0 z-10"
+          >
+            <ARGuide
+              lang={lang}
+              features={features}
+              initialTarget={selectedNavTarget ? LOCATIONS.find(location => location.name.bs === selectedNavTarget.name || location.name.en === selectedNavTarget.name || location.id === selectedNavTarget.name) : null}
+              unlockedRewards={unlockedRewards}
+              onRewardFound={onRewardFound}
+              onNavigate={(poi) => {
+                setShowARGuide(false);
+                handleStartNavigation(poi.name[lang] || poi.name.bs, poi.coordinates[0], poi.coordinates[1]);
+              }}
+            />
+          </div>
+        </>
+      )}
 
       {/* Victory Modals */}
       <AnimatePresence>
@@ -458,7 +497,7 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, unlockedRewards, onRe
           </div>
           <div className="flex gap-2">
             <button onClick={() => setIsScannerOpen(true)} className="flex-1 flex flex-col items-center gap-1 py-2 bg-gradient-to-b from-amber-500/20 to-amber-600/10 hover:from-amber-500 hover:to-amber-600 text-amber-300 hover:text-slate-950 rounded-2xl border border-amber-500/30 transition-all active:scale-95 shadow-md"><QrCode className="w-5 h-5" /><span className="text-[9px] font-black uppercase tracking-wider">QR Code</span></button>
-            <button onClick={() => setShowARGuide((prev) => !prev)} className="flex-1 flex flex-col items-center gap-1 py-2 bg-gradient-to-b from-purple-500/20 to-purple-600/10 hover:from-purple-500 hover:to-purple-600 text-purple-300 hover:text-slate-950 rounded-2xl border border-purple-500/30 transition-all active:scale-95 shadow-md"><Compass className="w-5 h-5" /><span className="text-[9px] font-black uppercase tracking-wider">AR Guide</span></button>
+            <button onClick={handleToggleARMode} className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-2xl border transition-all active:scale-95 shadow-md ${showARGuide ? 'bg-purple-500 text-slate-950 border-purple-300' : 'bg-gradient-to-b from-purple-500/20 to-purple-600/10 hover:from-purple-500 hover:to-purple-600 text-purple-300 hover:text-slate-950 border-purple-500/30'}`}><Compass className="w-5 h-5" /><span className="text-[9px] font-black uppercase tracking-wider">AR Guide</span></button>
             <button onClick={() => setIsPresetModalOpen(true)} className="flex-1 flex flex-col items-center gap-1 py-2 bg-gradient-to-b from-blue-500/20 to-blue-600/10 hover:from-blue-500 hover:to-blue-600 text-blue-300 hover:text-white rounded-2xl border border-blue-500/30 transition-all active:scale-95 shadow-md"><Route className="w-5 h-5" /><span className="text-[9px] font-black uppercase tracking-wider">GPS Route</span></button>
           </div>
         </div>
@@ -530,8 +569,8 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, unlockedRewards, onRe
                 <button onClick={() => setIsPresetModalOpen(false)} className="p-2 hover:bg-white/10 rounded-full text-slate-400 hover:text-white transition-all"><X size={18} /></button>
               </div>
               <div className="px-5 py-2 border-b border-white/5 flex gap-2">
-                <button onClick={() => setActiveModalTab('quest')} className={`flex-1 py-2.5 px-3 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all ${activeModalTab === 'quest' ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/30' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}><Trophy size={14} />{lang === 'bs' ? 'Potraga' : 'Quest Targets'}</button>
-                <button onClick={() => setActiveModalTab('poi')} className={`flex-1 py-2.5 px-3 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all ${activeModalTab === 'poi' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}><Landmark size={14} />{lang === 'bs' ? 'Znamenitosti' : 'Landmarks'}</button>
+                <button onClick={() => setActiveModalTab('quest')} className={`flex-1 py-2.5 px-3 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all ${activeModalTab === 'quest' ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/30' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}><Trophy size={14} />{lang === 'bs' ? 'Ciljevi' : 'Targets'}</button>
+                <button onClick={() => setActiveModalTab('poi')} className={`flex-1 py-2.5 px-3 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all ${activeModalTab === 'poi' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}><Landmark size={14} />{lang === 'bs' ? 'Znamenitosti' : 'Attractions'}</button>
                 <button onClick={() => setActiveModalTab('hotel')} className={`flex-1 py-2.5 px-3 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all ${activeModalTab === 'hotel' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}><HotelIcon size={14} />{lang === 'bs' ? 'Hoteli' : 'Hotels'}</button>
               </div>
               <div className="flex-1 overflow-y-auto p-5 space-y-3 custom-scrollbar">

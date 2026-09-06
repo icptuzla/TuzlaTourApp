@@ -186,6 +186,7 @@ const AppContent: React.FC = () => {
                   <Route path="/quest" element={
                     <MapQuestView
                       lang={lang}
+                      features={features}
                       unlockedRewards={unlockedRewards}
                       onRewardFound={(id) => setUnlockedRewards((prev) => (prev.includes(id) ? prev : [...prev, id]))}
                       navigationTarget={navigationTarget}
