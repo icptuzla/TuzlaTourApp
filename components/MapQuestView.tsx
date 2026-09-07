@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import * as pmtiles from 'pmtiles';
+import { globalPMTilesProtocol } from '../utils/pmtilesProtocol.ts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QrCode, Navigation, Route, Info, X, Compass, Landmark, Hotel as HotelIcon, Trophy, Layers, Check, ChevronUp, ChevronDown } from 'lucide-react';
 import { AppFeatures } from '../utils/platform.ts';
@@ -98,6 +98,15 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
   const handleStartNavigation = (name: string, lat: number, lon: number) => {
     setSelectedNavTarget({ name, lat, lon });
     setIsNavigating(true);
+    if (map.current && userLocationRef.current) {
+      map.current.flyTo({
+        center: [userLocationRef.current[0], userLocationRef.current[1]],
+        zoom: activeStyle === OFFLINE_STYLE ? 15 : 17.5,
+        pitch: 60,
+        bearing: -15,
+        duration: 2000
+      });
+    }
   };
 
   const handleToggleARMode = () => {
@@ -118,12 +127,10 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
       handleStartNavigation(name, lat, lon);
     };
     return () => { delete (window as any).startNavigationFromPopup; };
-  }, []);
+  }, [activeStyle]);
 
   useEffect(() => {
-    const protocol = new pmtiles.Protocol();
-    maplibregl.addProtocol('pmtiles', protocol.tile);
-    return () => { try { maplibregl.removeProtocol('pmtiles'); } catch (e) { } };
+    globalPMTilesProtocol.init();
   }, []);
 
   const applyGeoapifyPaintOverrides = (mapInstance: maplibregl.Map) => {
@@ -157,19 +164,44 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
       mapInstance.on('rotate', () => setBearing(Math.round(mapInstance.getBearing())));
       if (mapInstance.getStyle().name?.toLowerCase().includes('maptiler') || (mapInstance as any)._requestedStyleURL?.includes('geoapify')) applyGeoapifyPaintOverrides(mapInstance);
       mapInstance.addControl(new maplibregl.NavigationControl({ showCompass: true, visualizePitch: true }), 'bottom-right');
+      if (initialStyle === OFFLINE_STYLE) {
+        mapInstance.setMaxZoom(15);
+        if (mapInstance.getZoom() > 15) mapInstance.setZoom(15);
+      }
     });
-    mapInstance.on('styledata', () => { if (map.current && activeStyle === GEOAPIFY_MAPTILER_3D) applyGeoapifyPaintOverrides(map.current); });
+    mapInstance.on('styledata', () => {
+      if (map.current && activeStyle === GEOAPIFY_MAPTILER_3D) applyGeoapifyPaintOverrides(map.current);
+    });
     mapInstance.on('error', (e) => {
       const msg = e.error?.message || '';
       console.warn('🗺️ Map style error:', msg);
-      if (!navigator.onLine && !isOfflineMode) { setIsOfflineMode(true); setActiveStyle(OFFLINE_STYLE); mapInstance.setStyle(OFFLINE_STYLE); }
-      else if (navigator.onLine) { setActiveStyle(CARTO_VOYAGER_STYLE); mapInstance.setStyle(CARTO_VOYAGER_STYLE); }
+      if (!navigator.onLine && !isOfflineMode) {
+        setIsOfflineMode(true);
+        setActiveStyle(OFFLINE_STYLE);
+        mapInstance.setMaxZoom(15);
+        if (mapInstance.getZoom() > 15) mapInstance.setZoom(15);
+        mapInstance.setStyle(OFFLINE_STYLE);
+      } else if (navigator.onLine) {
+        setActiveStyle(CARTO_VOYAGER_STYLE);
+        mapInstance.setMaxZoom(20);
+        mapInstance.setStyle(CARTO_VOYAGER_STYLE);
+      }
     });
     return () => { mapInstance.remove(); map.current = null; };
   }, []);
 
   const handleSwitchLayer = (styleUrl: string) => {
-    if (map.current) { setActiveStyle(styleUrl); map.current.setStyle(styleUrl); setShowLayerMenu(false); }
+    if (map.current) {
+      setActiveStyle(styleUrl);
+      if (styleUrl === OFFLINE_STYLE) {
+        map.current.setMaxZoom(15);
+        if (map.current.getZoom() > 15) map.current.setZoom(15);
+      } else {
+        map.current.setMaxZoom(20);
+      }
+      map.current.setStyle(styleUrl);
+      setShowLayerMenu(false);
+    }
   };
 
   useEffect(() => {
@@ -222,7 +254,9 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
     try {
       const ROUTE_MAP_KEY = ['63e8b34f44974d71', 'bc70aad63e5b56ba'].join('');
       const apiKey = (import.meta as any).env?.VITE_GEOAPIFY_ROUTING_API || (import.meta as any).env?.VITE_GEOAPIFY_STATIC_API || ROUTE_MAP_KEY;
-      const url = `https://api.geoapify.com/v1/routing?waypoints=${startLoc[0]},${startLoc[1]}|${target.lon},${target.lat}&mode=walk&apiKey=${apiKey}`;
+      const startLng = startLoc[0];
+      const startLat = startLoc[1];
+      const url = `https://api.geoapify.com/v1/routing?waypoints=${startLat},${startLng}|${target.lat},${target.lon}&mode=walk&details=instruction_details,elevation&apiKey=${apiKey}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error('Routing API request failed');
       const data = await res.json();
@@ -235,26 +269,46 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
         (map.current.getSource('route-source') as maplibregl.GeoJSONSource).setData(data);
       } else {
         map.current.addSource('route-source', { type: 'geojson', data: data });
-        map.current.addLayer({ id: 'route-layer-casing', type: 'line', source: 'route-source', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#1c8a44', 'line-width': 9, 'line-opacity': 0.5 } });
-        map.current.addLayer({ id: 'route-layer', type: 'line', source: 'route-source', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#22c55e', 'line-width': 4, 'line-opacity': 0.9 } });
+        map.current.addLayer({
+          id: 'route-layer-casing',
+          type: 'line',
+          source: 'route-source',
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: { 'line-color': '#581c87', 'line-width': 10, 'line-opacity': 0.7 }
+        });
+        map.current.addLayer({
+          id: 'route-layer',
+          type: 'line',
+          source: 'route-source',
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: { 'line-color': '#a855f7', 'line-width': 5, 'line-opacity': 0.95 }
+        });
       }
-      const coordinates = routeFeature.geometry.coordinates;
-      if (coordinates && coordinates.length > 0) {
-        const bounds = new maplibregl.LngLatBounds();
-        coordinates.forEach((coord: [number, number]) => bounds.extend(coord));
-        map.current.fitBounds(bounds, { padding: { top: 120, bottom: 240, left: 60, right: 60 }, duration: 1500 });
+      // Fly into user location to start navigation view
+      if (map.current) {
+        map.current.flyTo({
+          center: [startLng, startLat],
+          zoom: activeStyle === OFFLINE_STYLE ? 15 : 17.5,
+          pitch: 60,
+          bearing: -15,
+          duration: 2000
+        });
       }
     } catch (error) {
       console.warn('Geoapify route fallback triggered:', error);
-      const distKm = getDistance(startLoc[1], startLoc[0], target.lat, target.lon);
-      const distMeters = distKm * 1000;
-      setRouteDistance(distMeters); setRouteTime(distMeters / 1.4);
-      const lineGeoJson = { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'LineString', coordinates: [[startLoc[0], startLoc[1]], [target.lon, target.lat]] }, properties: {} }] };
-      if (map.current.getSource('route-source')) {
-        (map.current.getSource('route-source') as maplibregl.GeoJSONSource).setData(lineGeoJson as any);
-      } else {
-        map.current.addSource('route-source', { type: 'geojson', data: lineGeoJson as any });
-        map.current.addLayer({ id: 'route-layer', type: 'line', source: 'route-source', paint: { 'line-color': '#3b82f6', 'line-width': 4, 'line-dasharray': [2, 2] } });
+      const startLng = startLoc[0];
+      const startLat = startLoc[1];
+      const distMeters = getDistance(startLat, startLng, target.lat, target.lon);
+      setRouteDistance(distMeters);
+      setRouteTime(distMeters / 1.4);
+      if (map.current) {
+        map.current.flyTo({
+          center: [startLng, startLat],
+          zoom: activeStyle === OFFLINE_STYLE ? 15 : 17.5,
+          pitch: 60,
+          bearing: -15,
+          duration: 2000
+        });
       }
     } finally { setIsRouteLoading(false); }
   };
@@ -270,7 +324,9 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
     onError: (err) => console.error("MapQuest Geolocation Error:", err),
   });
 
-  // User Marker & Nav Line Update driven by single geolocation watcher stream
+  const hasFlownToUserRef = useRef<boolean>(false);
+
+  // User Marker Update driven by single geolocation watcher stream
   useEffect(() => {
     if (!rawGeoPosition) return;
 
@@ -291,9 +347,7 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
 
     let distance = Infinity;
     if (targetLat !== null && targetLng !== null) {
-      const dLat = (rawLat - targetLat) * 111000;
-      const dLng = (rawLng - targetLng) * 111000 * Math.cos(rawLat * Math.PI / 180);
-      distance = Math.sqrt(dLat * dLat + dLng * dLng);
+      distance = getDistance(rawLat, rawLng, targetLat, targetLng);
     }
 
     const smoothed = gpsFilterRef.current.update(rawLat, rawLng, distance);
@@ -307,32 +361,20 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
       if (!userMarkerRef.current) {
         const el = document.createElement('div');
         el.className = 'user-gps-marker';
-        el.innerHTML = `<div class="relative flex items-center justify-center w-6 h-6"><div class="absolute w-full h-full bg-blue-500 rounded-full animate-ping opacity-75"></div><div class="relative w-4 h-4 bg-blue-600 border-2 border-white rounded-full shadow-lg"></div></div>`;
+        el.innerHTML = `<div class="relative flex items-center justify-center w-6 h-6"><div class="absolute w-full h-full bg-purple-500 rounded-full animate-ping opacity-75"></div><div class="relative w-4 h-4 bg-purple-600 border-2 border-white rounded-full shadow-lg"></div></div>`;
         userMarkerRef.current = new maplibregl.Marker(el).setLngLat([longitude, latitude]).addTo(map.current);
-        map.current?.flyTo({ center: [longitude, latitude], zoom: 17, pitch: 60, duration: 2000 });
       } else {
         userMarkerRef.current.setLngLat([longitude, latitude]);
       }
       (window as any).currentUserLngLat = [longitude, latitude];
 
-      let targetPoint = navigationTarget;
-      if (!targetPoint) {
-        const lockedPoints = LOCATIONS.filter(l => !unlockedRewards.includes(l.id) && l.category !== 'hotel' && l.category !== 'food' && l.category !== 'shop');
-        if (lockedPoints.length > 0) {
-          let closest = lockedPoints[0];
-          let minDist = getDistance(latitude, longitude, closest.coordinates[0], closest.coordinates[1]);
-          lockedPoints.forEach(p => { const d = getDistance(latitude, longitude, p.coordinates[0], p.coordinates[1]); if (d < minDist) { minDist = d; closest = p; } });
-          targetPoint = closest;
-        }
-      }
-      if (targetPoint) {
-        const navLineSource = map.current.getSource('nav-line') as maplibregl.GeoJSONSource;
-        if (navLineSource) {
-          navLineSource.setData({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [[longitude, latitude], [targetPoint.coordinates[1], targetPoint.coordinates[0]]] } });
-        }
+      // Smooth initial fly-in to user location once GPS lock is acquired
+      if (!hasFlownToUserRef.current) {
+        hasFlownToUserRef.current = true;
+        map.current.flyTo({ center: [longitude, latitude], zoom: activeStyle === OFFLINE_STYLE ? 15 : 17, pitch: 60, bearing: -15, duration: 2500 });
       }
     }
-  }, [rawGeoPosition, isLoaded, navigationTarget, unlockedRewards, selectedNavTarget]);
+  }, [rawGeoPosition, isLoaded, navigationTarget, unlockedRewards, selectedNavTarget, activeStyle]);
 
   const handleEndNavigation = () => {
     setIsNavigating(false); setSelectedNavTarget(null); setRouteDistance(null); setRouteTime(null);
@@ -520,9 +562,46 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
         className="absolute z-30 flex items-center gap-2 transition-all duration-150 left-3"
         style={showARGuide ? { bottom: `calc(${100 - splitHeight}% + 16px)` } : { bottom: '1rem' }}
       >
-        <button onClick={() => { if (userLocation && map.current) map.current.flyTo({ center: [userLocation[1], userLocation[0]], zoom: 17, pitch: 60 }); }} className="w-10 h-10 flex items-center justify-center bg-blue-600/90 backdrop-blur-xl border border-blue-400/40 rounded-full shadow-lg text-white active:scale-95 transition-all hover:bg-blue-500" title={lang === 'bs' ? 'Moja Lokacija' : 'My Location'}><Navigation size={18} /></button>
-        <button onClick={() => setShowRules((prev) => !prev)} className="w-10 h-10 flex items-center justify-center bg-slate-900/90 backdrop-blur-xl border border-blue-400/30 rounded-full shadow-lg text-blue-400 hover:text-white active:scale-95 transition-all" title={lang === 'bs' ? 'Pravila Potrage' : 'Quest Rules'}><Info size={18} /></button>
-        <button onClick={() => setShowLayerMenu((prev) => !prev)} className="w-10 h-10 flex items-center justify-center bg-slate-900/90 backdrop-blur-xl border border-blue-400/40 rounded-full shadow-xl text-blue-400 hover:text-white hover:border-blue-400 active:scale-95 transition-all" title={lang === 'bs' ? 'Promijeni Sloj Mape' : 'Switch Map Layer'}><Layers size={18} /></button>
+        <button
+          onClick={() => {
+            if (userLocationRef.current && map.current) {
+              map.current.flyTo({
+                center: [userLocationRef.current[0], userLocationRef.current[1]],
+                zoom: activeStyle === OFFLINE_STYLE ? 15 : 17.5,
+                pitch: 60,
+                bearing: -15,
+                duration: 2000
+              });
+            } else if (rawGeoPosition && map.current) {
+              map.current.flyTo({
+                center: [rawGeoPosition.lng, rawGeoPosition.lat],
+                zoom: activeStyle === OFFLINE_STYLE ? 15 : 17.5,
+                pitch: 60,
+                bearing: -15,
+                duration: 2000
+              });
+            } else if (navigator.geolocation && map.current) {
+              navigator.geolocation.getCurrentPosition((pos) => {
+                const { longitude, latitude } = pos.coords;
+                userLocationRef.current = [longitude, latitude];
+                setUserLocation([latitude, longitude]);
+                map.current?.flyTo({
+                  center: [longitude, latitude],
+                  zoom: activeStyle === OFFLINE_STYLE ? 15 : 17.5,
+                  pitch: 60,
+                  bearing: -15,
+                  duration: 2000
+                });
+              });
+            }
+          }}
+          className="w-10 h-10 flex items-center justify-center bg-purple-600/90 backdrop-blur-xl border border-purple-400/40 rounded-full shadow-lg text-white active:scale-95 transition-all hover:bg-purple-500"
+          title={lang === 'bs' ? 'Moja Lokacija' : 'My Location'}
+        >
+          <Navigation size={18} />
+        </button>
+        <button onClick={() => setShowRules((prev) => !prev)} className="w-10 h-10 flex items-center justify-center bg-slate-900/90 backdrop-blur-xl border border-purple-400/30 rounded-full shadow-lg text-purple-400 hover:text-white active:scale-95 transition-all" title={lang === 'bs' ? 'Pravila Potrage' : 'Quest Rules'}><Info size={18} /></button>
+        <button onClick={() => setShowLayerMenu((prev) => !prev)} className="w-10 h-10 flex items-center justify-center bg-slate-900/90 backdrop-blur-xl border border-purple-400/40 rounded-full shadow-xl text-purple-400 hover:text-white hover:border-purple-400 active:scale-95 transition-all" title={lang === 'bs' ? 'Promijeni Sloj Mape' : 'Switch Map Layer'}><Layers size={18} /></button>
       </div>
 
       {/* Layer Menu Dropdown */}

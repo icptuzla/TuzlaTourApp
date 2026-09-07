@@ -9,18 +9,11 @@
       "type": "vector",
       "url": "pmtiles:///maps/tuzla.pmtiles",
       "minzoom": 0,
-      "maxzoom": 18
+      "maxzoom": 15
     },
     "app-pois": {
       "type": "geojson",
       "data": "/maps/poi.geojson"
-    },
-    "tour-data": {
-      "type": "geojson",
-      "data": {
-        "type": "FeatureCollection",
-        "features": []
-      }
     }
   },
   "layers": [
@@ -28,7 +21,18 @@
       "id": "background",
       "type": "background",
       "paint": {
-        "background-color": "#cceb94"
+        "background-color": "#f1f4e8"
+      }
+    },
+    {
+      "id": "pmtiles-earth",
+      "type": "fill",
+      "source": "tuzla-pmtiles",
+      "source-layer": "earth",
+      "minzoom": 0,
+      "maxzoom": 15,
+      "paint": {
+        "fill-color": "#f1f4e8"
       }
     },
     {
@@ -37,22 +41,65 @@
       "source": "tuzla-pmtiles",
       "source-layer": "landuse",
       "minzoom": 0,
-      "maxzoom": 18,
+      "maxzoom": 15,
       "paint": {
-        "fill-color": "#d1c88c",
-        "fill-opacity": 0.5
+        "fill-color": "#e2ded5",
+        "fill-opacity": 0.4
       }
     },
     {
-      "id": "pmtiles-water",
+      "id": "pmtiles-landcover",
+      "type": "fill",
+      "source": "tuzla-pmtiles",
+      "source-layer": "landcover",
+      "minzoom": 8,
+      "maxzoom": 15,
+      "paint": {
+        "fill-color": "#d2eec4",
+        "fill-opacity": 0.55
+      }
+    },
+    {
+      "id": "pmtiles-water-lakes",
       "type": "fill",
       "source": "tuzla-pmtiles",
       "source-layer": "water",
       "minzoom": 0,
-      "maxzoom": 18,
+      "maxzoom": 15,
+      "filter": [
+        "all",
+        ["==", "$type", "Polygon"],
+        ["!=", ["get", "kind"], "river"],
+        ["!=", ["get", "kind_detail"], "river"]
+      ],
       "paint": {
-        "fill-color": "#2891e0",
+        "fill-color": "#67b6eb",
         "fill-opacity": 0.8
+      }
+    },
+    {
+      "id": "pmtiles-waterways-casing",
+      "type": "line",
+      "source": "tuzla-pmtiles",
+      "source-layer": "water",
+      "minzoom": 10,
+      "maxzoom": 15,
+      "filter": [
+        "all",
+        ["==", "$type", "LineString"]
+      ],
+      "paint": {
+        "line-color": "#4aa9df",
+        "line-width": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          10, 1.2,
+          12, 2.2,
+          14, 4.0,
+          15, 5.5
+        ],
+        "line-opacity": 0.85
       }
     },
     {
@@ -60,13 +107,24 @@
       "type": "line",
       "source": "tuzla-pmtiles",
       "source-layer": "water",
-      "minzoom": 8,
-      "maxzoom": 18,
-      "filter": ["==", "$type", "LineString"],
+      "minzoom": 10,
+      "maxzoom": 15,
+      "filter": [
+        "all",
+        ["==", "$type", "LineString"]
+      ],
       "paint": {
-        "line-color": "#2891e0",
-        "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.8, 14, 2, 18, 5],
-        "line-opacity": 0.55
+        "line-color": "#81caf7",
+        "line-width": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          10, 0.8,
+          12, 1.5,
+          14, 2.5,
+          15, 3.5
+        ],
+        "line-opacity": 0.95
       }
     },
     {
@@ -75,25 +133,17 @@
       "source": "tuzla-pmtiles",
       "source-layer": "roads",
       "minzoom": 0,
-      "maxzoom": 18,
+      "maxzoom": 15,
       "paint": {
-        "line-color": "#b28b62",
+        "line-color": "#cbbca8",
         "line-width": [
           "interpolate",
-          [
-            "linear"
-          ],
-          [
-            "zoom"
-          ],
-          0,
-          0.5,
-          10,
-          2.5,
-          14,
-          4.5,
-          18,
-          12
+          ["linear"],
+          ["zoom"],
+          0, 0.5,
+          10, 2.2,
+          14, 4.5,
+          15, 6.0
         ]
       }
     },
@@ -103,18 +153,26 @@
       "source": "tuzla-pmtiles",
       "source-layer": "roads",
       "minzoom": 3,
-      "maxzoom": 18,
+      "maxzoom": 15,
       "paint": {
         "line-color": [
           "match",
           ["get", "kind"],
-          "highway", "#f2c879",
-          "major_road", "#f7d78d",
-          "minor_road", "#fff4d6",
-          "path", "#d8c7a6",
-          "#eadcc4"
+          "highway", "#f5be57",
+          "major_road", "#fae09d",
+          "minor_road", "#ffffff",
+          "path", "#d5cbba",
+          "#fbf8f2"
         ],
-        "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.5, 10, 1.2, 14, 2.5, 18, 7]
+        "line-width": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          3, 0.5,
+          10, 1.2,
+          14, 2.8,
+          15, 4.2
+        ]
       }
     },
     {
@@ -123,56 +181,23 @@
       "source": "tuzla-pmtiles",
       "source-layer": "buildings",
       "minzoom": 13,
-      "maxzoom": 18,
+      "maxzoom": 15,
       "paint": {
-        "fill-extrusion-color": "#dbdad7",
+        "fill-extrusion-color": "#cbd2d9",
         "fill-extrusion-height": [
           "coalesce",
-          [
-            "get",
-            "render_height"
-          ],
-          [
-            "get",
-            "height"
-          ],
-          12
+          ["get", "render_height"],
+          ["get", "height"],
+          10
         ],
         "fill-extrusion-base": [
           "coalesce",
-          [
-            "get",
-            "render_min_height"
-          ],
-          [
-            "get",
-            "min_height"
-          ],
+          ["get", "render_min_height"],
+          ["get", "min_height"],
           0
         ],
-        "fill-extrusion-opacity": 0.8
+        "fill-extrusion-opacity": 0.75
       }
-    },
-    {
-      "id": "tour-route-line",
-      "type": "line",
-      "source": "tour-data",
-      "minzoom": 0,
-      "maxzoom": 18,
-      "filter": [
-        "==",
-        "$type",
-        "LineString"
-      ],
-      "paint": {
-        "line-color": "#3b82f6",
-        "line-width": 4,
-        "line-opacity": 0.8,
-        "line-dasharray": [
-          2,
-          1
-        ]
-      }
-   }   
-  ] 
-  }
+    }
+  ]
+}

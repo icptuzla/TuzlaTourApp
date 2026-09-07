@@ -50,7 +50,7 @@ export function useGeoapifyRoute({
     reachedTriggeredRef.current = false; setHasReachedDestination(false);
 
     try {
-      const url = `https://api.geoapify.com/v1/routing?waypoints=${origin.lng},${origin.lat}|${destination.lng},${destination.lat}&mode=walk&details=instruction_details,elevation&apiKey=${apiKey}`;
+      const url = `https://api.geoapify.com/v1/routing?waypoints=${origin.lat},${origin.lng}|${destination.lat},${destination.lng}&mode=walk&details=instruction_details,elevation&apiKey=${apiKey}`;
       const controller = new AbortController();
       const timeoutId = window.setTimeout(() => controller.abort(), 10000);
       const res = await fetch(url, { signal: controller.signal }).finally(() => window.clearTimeout(timeoutId));
@@ -59,7 +59,9 @@ export function useGeoapifyRoute({
       const feature = data.features?.[0];
       if (!feature) throw new Error('No routing path found');
 
-      const rawCoords: Array<[number, number, number?]> = feature.geometry?.coordinates || [];
+      const rawCoords: Array<[number, number, number?]> = feature.geometry?.type === 'MultiLineString'
+        ? feature.geometry.coordinates.flat(1)
+        : (feature.geometry?.coordinates || []);
       const parsedPolyline: Array<[number, number, number]> = rawCoords.map((coord) => [coord[1], coord[0], coord[2] ?? 0]);
       setFullPolyline(parsedPolyline);
 

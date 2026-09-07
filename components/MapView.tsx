@@ -1,7 +1,8 @@
 import React, { useRef, useEffect, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { OfflinePlugin, OFFLINE_STATUS } from '@makina-corpus/maplibre-offline-pmtiles';
+import { globalPMTilesProtocol } from '../utils/pmtilesProtocol';
+import { getDistance } from '../utils/geoUtils';
 import { Language } from '../types';
 import { TUZLA_CENTER } from '../constants';
 import { AppFeatures } from '../utils/platform';
@@ -24,46 +25,13 @@ interface MapViewProps {
 const GEO_MAP_KEY = ['65090a03070e4e18', '98694f7a18ba415b'].join('');
 const ROUTE_MAP_KEY = ['63e8b34f44974d71', 'bc70aad63e5b56ba'].join('');
 
-const OFFLINE_MAP_NAME = 'tuzla-city-v2';
-const OFFLINE_MAP_URL = '/maps/tuzla.pmtiles';
-const OFFLINE_MAP_STYLE_URL = '/maps/offline-vector-style.json';
-const OFFLINE_MAP_READY_KEY = 'tuzla.offline-map.ready.v2';
+const OFFLINE_STYLE = '/maps/offline-vector-style.json';
 const ONLINE_STYLE = `https://maps.geoapify.com/v1/styles/osm-liberty/style.json?apiKey=${import.meta.env.VITE_GEOAPIFY_MAP_TILES_API || import.meta.env.VITE_GEOAPIFY_STATIC_API || GEO_MAP_KEY}`;
-const ONLINE_TUZLATOUR = `https://maps.geoapify.com/v1/styles/osm-liberty/style.json?apiKey=${import.meta.env.VITE_GEOAPIFY_MAP_TILES_API || import.meta.env.VITE_GEOAPIFY_STATIC_API || GEO_MAP_KEY}`;
-
-OfflinePlugin.registerProtocol(maplibregl);
-const offlinePlugin = new OfflinePlugin();
-const EMPTY_MAP_STYLE: maplibregl.StyleSpecification = {
-  version: 8,
-  sources: {},
-  layers: [{ id: 'offline-background', type: 'background', paint: { 'background-color': '#0f172a' } }],
-};
 
 const MAP_LAYER_OPTIONS = [
   { id: 'geoapify', name: { bs: 'Geoapify OSM (Online)', en: 'Geoapify OSM (Online)' }, url: ONLINE_STYLE },
-  { id: 'offline', name: { bs: 'Lokalna PMTiles (Offline)', en: 'Local PMTiles (Offline)' }, url: 'offline' },
+  { id: 'offline', name: { bs: 'Lokalna PMTiles (Offline)', en: 'Local PMTiles (Offline)' }, url: OFFLINE_STYLE },
 ];
-
-const loadOfflineMap = async (mapInstance: maplibregl.Map): Promise<void> => {
-  const statusHandler = (status: { code: OFFLINE_STATUS; progress?: number | string }) => {
-    if (status.code === OFFLINE_STATUS.PROGRESS) console.info('Offline map:', status.progress);
-  };
-
-  if (localStorage.getItem(OFFLINE_MAP_READY_KEY) !== 'true') {
-    const styleResponse = await fetch(OFFLINE_MAP_STYLE_URL);
-    if (!styleResponse.ok) throw new Error(`Offline style request failed: ${styleResponse.status}`);
-    const style = await styleResponse.json();
-    const pmtilesStyle = {
-      ...style,
-      sources: {},
-      layers: style.layers.filter((layer: { type: string; source?: string }) => layer.type === 'background' || layer.source === 'tuzla-pmtiles'),
-    };
-    await offlinePlugin.downloadMap(OFFLINE_MAP_URL, OFFLINE_MAP_NAME, statusHandler, pmtilesStyle);
-    localStorage.setItem(OFFLINE_MAP_READY_KEY, 'true');
-  }
-
-  await offlinePlugin.loadMap(mapInstance, OFFLINE_MAP_NAME, statusHandler);
-};
 interface RoutePoiPreset {
   name: Partial<Record<Language, string>> & { en: string; bs: string };
   lat: number;
@@ -164,7 +132,7 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
   const map = useRef<maplibregl.Map | null>(null);
   const userMarker = useRef<maplibregl.Marker | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [activeStyle, setActiveStyle] = useState<string>(navigator.onLine ? ONLINE_STYLE : 'offline');
+  const [activeStyle, setActiveStyle] = useState<string>(navigator.onLine ? ONLINE_STYLE : OFFLINE_STYLE);
   const [showLayerMenu, setShowLayerMenu] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
@@ -188,6 +156,11 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
   const [isRouteLoading, setIsRouteLoading] = useState(false);
   const [activeModalTab, setActiveModalTab] = useState<'poi' | 'hotel' | 'qrcode'>('poi');
 
+  // Register PMTiles Protocol
+  useEffect(() => {
+    globalPMTilesProtocol.init();
+  }, []);
+
   const handleSwitchLayer = (styleUrl: string) => {
     if (!map.current || activeStyle === styleUrl) {
       setShowLayerMenu(false);
@@ -196,21 +169,17 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
 
     setActiveStyle(styleUrl);
     setShowLayerMenu(false);
+    setIsLoaded(false);
 
-    if (styleUrl === 'offline') {
-      setIsLoaded(false);
-      map.current.setStyle(EMPTY_MAP_STYLE);
-      map.current.once('style.load', () => {
-        void loadOfflineMap(map.current!).then(() => setIsLoaded(true)).catch((error) => {
-          console.error('Offline PMTiles layer failed to load:', error);
-          setActiveStyle(ONLINE_STYLE);
-          map.current?.setStyle(ONLINE_STYLE);
-        });
-      });
-      return;
+    if (styleUrl === OFFLINE_STYLE) {
+      map.current.setMaxZoom(15);
+      if (map.current.getZoom() > 15) {
+        map.current.setZoom(15);
+      }
+    } else {
+      map.current.setMaxZoom(20);
     }
 
-    setIsLoaded(false);
     map.current.setStyle(styleUrl);
     map.current.once('style.load', () => setIsLoaded(true));
   };
@@ -225,11 +194,20 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
       for (let i = 0; i < popups.length; i++) {
         (popups[i] as HTMLElement).remove();
       }
+      if (map.current && userLocationRef.current) {
+        map.current.flyTo({
+          center: [userLocationRef.current[0], userLocationRef.current[1]],
+          zoom: activeStyle === OFFLINE_STYLE ? 15 : 17.5,
+          pitch: 55,
+          bearing: -15,
+          duration: 2000
+        });
+      }
     };
     return () => {
       delete (window as any).startNavigationFromPopup;
     };
-  }, []);
+  }, [activeStyle]);
 
   const clearRoute = () => {
     if (map.current) {
@@ -251,7 +229,9 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
 
     try {
       const apiKey = import.meta.env.VITE_GEOAPIFY_ROUTING_API || import.meta.env.VITE_GEOAPIFY_STATIC_API || ROUTE_MAP_KEY;
-      const url = `https://api.geoapify.com/v1/routing?waypoints=${startLoc[0]},${startLoc[1]}|${target.lon},${target.lat}&mode=walk&apiKey=${apiKey}`;
+      const startLng = startLoc[0];
+      const startLat = startLoc[1];
+      const url = `https://api.geoapify.com/v1/routing?waypoints=${startLat},${startLng}|${target.lat},${target.lon}&mode=walk&apiKey=${apiKey}`;
 
       const res = await fetch(url);
       if (!res.ok) throw new Error('Routing API request failed');
@@ -262,13 +242,11 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
       }
 
       const routeFeature = data.features[0];
-      const distance = routeFeature.properties.distance; // in meters
-      const time = routeFeature.properties.time; // in seconds
+      const distance = routeFeature.properties.distance;
+      const time = routeFeature.properties.time;
 
       setRouteDistance(distance);
       setRouteTime(time);
-
-      if (!map.current) return;
 
       if (map.current.getSource('route-source')) {
         const source = map.current.getSource('route-source') as maplibregl.GeoJSONSource;
@@ -288,9 +266,9 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
             'line-cap': 'round'
           },
           paint: {
-            'line-color': '#1c8a44ff',
-            'line-width': 9,
-            'line-opacity': 0.5
+            'line-color': '#581c87',
+            'line-width': 10,
+            'line-opacity': 0.7
           }
         });
 
@@ -303,36 +281,45 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
             'line-cap': 'round'
           },
           paint: {
-            'line-color': '#22c55e',
-            'line-width': 4,
-            'line-opacity': 0.9
+            'line-color': '#a855f7',
+            'line-width': 5,
+            'line-opacity': 0.95
           }
         });
       }
 
-      const coordinates = routeFeature.geometry.coordinates;
-      if (coordinates && coordinates.length > 0) {
-        const bounds = new maplibregl.LngLatBounds();
-        coordinates.forEach((coord: [number, number]) => {
-          bounds.extend(coord);
-        });
-
-        map.current.fitBounds(bounds, {
-          padding: { top: 120, bottom: 240, left: 60, right: 60 },
-          duration: 1500
+      // Fly to user location to start navigation view
+      if (map.current) {
+        map.current.flyTo({
+          center: [startLng, startLat],
+          zoom: activeStyle === OFFLINE_STYLE ? 15 : 17.5,
+          pitch: 55,
+          bearing: -15,
+          duration: 2000
         });
       }
 
     } catch (error) {
-      console.error('Error calculating route:', error);
+      console.warn('Geoapify route calculation failed, using fallback direct distance:', error);
+      const startLng = startLoc[0];
+      const startLat = startLoc[1];
+      const distMeters = getDistance(startLat, startLng, target.lat, target.lon);
+      setRouteDistance(distMeters);
+      setRouteTime(distMeters / 1.4);
+      if (map.current) {
+        map.current.flyTo({
+          center: [startLng, startLat],
+          zoom: activeStyle === OFFLINE_STYLE ? 15 : 17.5,
+          pitch: 55,
+          bearing: -15,
+          duration: 2000
+        });
+      }
     } finally {
       setIsRouteLoading(false);
     }
   };
 
-  // Recalculate route ONLY when the user explicitly starts navigation or
-  // changes the destination — NOT on every GPS location tick.
-  // userLocationRef is read inside calculateRoute to get the current position.
   useEffect(() => {
     if (isNavigating && selectedTarget && isLoaded) {
       const start = userLocationRef.current || [TUZLA_CENTER[1], TUZLA_CENTER[0]] as [number, number];
@@ -340,10 +327,8 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
     } else {
       clearRoute();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isNavigating, selectedTarget, isLoaded]); // intentionally excludes userLocation
+  }, [isNavigating, selectedTarget, isLoaded]);
 
-  // Local GeoJSON Search
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
@@ -351,8 +336,6 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
     setIsSearching(true);
     try {
       let combinedResults: any[] = [];
-
-      // 1. Search TuzlaTourGuide.geojson (local POI dataset)
       try {
         const res = await fetch('/maps/TuzlaTourGuide.geojson');
         if (res.ok) {
@@ -389,7 +372,6 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
         console.warn('TuzlaTourGuide.geojson search failed:', err);
       }
 
-      // 2. If online, also query Geoapify for real addresses
       if (isOnline) {
         try {
           let geoData;
@@ -404,7 +386,6 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
             if (backupKey) {
               const backupRes = await fetch(`https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(searchQuery)}&bias=proximity:18.67,44.53&filter=rect:18.5,44.4,18.8,44.7&apiKey=${backupKey}`);
               if (!backupRes.ok) {
-                // Try as LocationIQ just in case
                 const liqRes = await fetch(`https://eu1.locationiq.com/v1/search.php?key=${backupKey}&q=${encodeURIComponent(searchQuery)}&format=json`);
                 if (liqRes.ok) {
                   const liqData = await liqRes.json();
@@ -449,9 +430,7 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
   const handleSelectSearchResult = (result: any) => {
     if (map.current) {
       map.current.flyTo({ center: [result.lon, result.lat], zoom: 17, pitch: 60 });
-
       if (searchMarkerRef.current) searchMarkerRef.current.remove();
-
       searchMarkerRef.current = new maplibregl.Marker({ color: '#ea580c' })
         .setLngLat([result.lon, result.lat])
         .setPopup(new maplibregl.Popup({ offset: 25 }).setHTML(`
@@ -463,15 +442,12 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
           </div>
         `))
         .addTo(map.current);
-
       searchMarkerRef.current.togglePopup();
-
       setSearchedTarget({
         name: result.display_name,
         lat: result.lat,
         lon: result.lon
       });
-
       setSearchResults([]);
       setSearchQuery('');
       setIsSearchOpen(false);
@@ -481,27 +457,27 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
   useEffect(() => {
     if (!mapContainer.current) return;
 
+    const initialStyle = navigator.onLine ? ONLINE_STYLE : OFFLINE_STYLE;
+
     map.current = new maplibregl.Map({
       container: mapContainer.current,
-      style: navigator.onLine ? ONLINE_STYLE : EMPTY_MAP_STYLE,
+      style: initialStyle,
       center: [TUZLA_CENTER[1], TUZLA_CENTER[0]],
-      zoom: 16,
+      zoom: initialStyle === OFFLINE_STYLE ? 15 : 16,
       minZoom: 0,
-      maxZoom: 20,
+      maxZoom: initialStyle === OFFLINE_STYLE ? 15 : 20,
       pitch: 45,
       bearing: 0
     });
 
-    map.current.on('load', async () => {
-      try {
-        if (!navigator.onLine) await loadOfflineMap(map.current!);
-        setIsLoaded(true);
-        map.current?.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'bottom-right');
-      } catch (error) {
-        console.error('Offline PMTiles map failed to load:', error);
+    map.current.on('load', () => {
+      setIsLoaded(true);
+      map.current?.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'bottom-right');
+      if (initialStyle === OFFLINE_STYLE) {
+        map.current?.setMaxZoom(15);
+        if ((map.current?.getZoom() ?? 0) > 15) map.current?.setZoom(15);
       }
 
-      // Add Hotel Markers
       tuzlaHotelData.forEach(hotel => {
         const el = document.createElement('div');
         el.className = 'hotel-marker';
@@ -533,15 +509,12 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
     });
 
     map.current.on('error', (e) => {
-      console.warn('Map error:', e.error?.message);
-      if (navigator.onLine && activeStyle === ONLINE_STYLE && map.current) {
-        setActiveStyle('offline');
-        map.current.setStyle(EMPTY_MAP_STYLE);
-        map.current.once('style.load', () => {
-          void loadOfflineMap(map.current!).then(() => setIsLoaded(true)).catch((offlineError) => {
-            console.error('Online and offline map styles failed:', offlineError);
-          });
-        });
+      console.warn('🗺️ MapView style error:', e.error?.message);
+      if (!navigator.onLine && activeStyle !== OFFLINE_STYLE && map.current) {
+        setActiveStyle(OFFLINE_STYLE);
+        map.current.setMaxZoom(15);
+        if (map.current.getZoom() > 15) map.current.setZoom(15);
+        map.current.setStyle(OFFLINE_STYLE);
       }
     });
 
@@ -673,8 +646,38 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
         </button>
       </div>
 
-      {/* Map Layer Switcher */}
-      <div className="absolute bottom-6 left-3 sm:left-6 z-[150]">
+      {/* Map Layer Switcher & GPS Button */}
+      <div className="absolute bottom-6 left-3 sm:left-6 z-[150] flex flex-col gap-2.5">
+        <button
+          onClick={() => {
+            if (userLocationRef.current && map.current) {
+              map.current.flyTo({
+                center: [userLocationRef.current[0], userLocationRef.current[1]],
+                zoom: activeStyle === OFFLINE_STYLE ? 15 : 17.5,
+                pitch: 55,
+                bearing: -15,
+                duration: 2000
+              });
+            } else if (navigator.geolocation && map.current) {
+              navigator.geolocation.getCurrentPosition((pos) => {
+                const { longitude, latitude } = pos.coords;
+                userLocationRef.current = [longitude, latitude];
+                setUserLocation([longitude, latitude]);
+                map.current?.flyTo({
+                  center: [longitude, latitude],
+                  zoom: activeStyle === OFFLINE_STYLE ? 15 : 17.5,
+                  pitch: 55,
+                  bearing: -15,
+                  duration: 2000
+                });
+              });
+            }
+          }}
+          className="map-action-btn w-10 h-10 sm:w-14 sm:h-14 bg-blue-600/90 hover:bg-blue-600 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-2xl border border-blue-400/50 flex items-center justify-center text-white hover:scale-110 active:scale-95 transition-all"
+          title={lang === 'bs' ? 'Moja Lokacija' : 'My Location'}
+        >
+          <Navigation size={20} className="text-white" />
+        </button>
         <button
           onClick={() => setShowLayerMenu((previous) => !previous)}
           className="map-action-btn w-10 h-10 sm:w-14 sm:h-14 bg-slate-900/90 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-2xl border border-blue-400/40 flex items-center justify-center text-blue-300 hover:text-white hover:border-blue-300 active:scale-95 transition-all"
