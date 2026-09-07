@@ -3,7 +3,8 @@ import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { globalPMTilesProtocol } from '../utils/pmtilesProtocol.ts';
 import { motion, AnimatePresence } from 'framer-motion';
-import { QrCode, Navigation, Route, Info, X, Compass, Landmark, Hotel as HotelIcon, Trophy, Layers, Check, ChevronUp, ChevronDown } from 'lucide-react';
+import CelebrationOverlay from './CelebrationOverlay';
+import { QrCode, Navigation, Route, Info, X, Compass, Landmark, Hotel as HotelIcon, Trophy, Layers, Check, ChevronUp, ChevronDown, Play } from 'lucide-react';
 import { AppFeatures } from '../utils/platform.ts';
 import { Language } from '../types.ts';
 import { TUZLA_CENTER, LOCATIONS } from '../constants.tsx';
@@ -68,6 +69,7 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
   const [isNavigating, setIsNavigating] = useState(false);
   const [isPresetModalOpen, setIsPresetModalOpen] = useState(false);
   const [activeModalTab, setActiveModalTab] = useState<'quest' | 'poi' | 'hotel'>('quest');
+  const [playingQuestVideo, setPlayingQuestVideo] = useState<{ url: string; title: string } | null>(null);
   const [showLayerMenu, setShowLayerMenu] = useState(false);
   const [routeDistance, setRouteDistance] = useState<number | null>(null);
   const [routeTime, setRouteTime] = useState<number | null>(null);
@@ -75,6 +77,7 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
   const [showRules, setShowRules] = useState(false);
   const [isHudHidden, setIsHudHidden] = useState(false);
   const [activeVictoryModal, setActiveVictoryModal] = useState<'phase1' | 'phase2' | 'phase3' | 'finale' | null>(null);
+const [showCelebration, setShowCelebration] = useState<{ phase: number; rewardUrl?: string } | null>(null);
   const [dismissedModals, setDismissedModals] = useState<string[]>([]);
 
   const isPhase1Done = PHASE_1_POIS.every(id => unlockedRewards.includes(id));
@@ -90,10 +93,21 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
     else if (isPhase1Done && !dismissedModals.includes('phase1')) setActiveVictoryModal('phase1');
   }, [isPhase1Done, isPhase2Done, isPhase3Done, isGrandFinaleDone, dismissedModals]);
 
+useEffect(() => {
+  if (activeVictoryModal === 'phase2') {
+    setShowCelebration({ phase: 2, rewardUrl: 'https://bafybeibd5ee6pjvkhn3kuitcclb5zjqdwo23yvprfwsaabcctylesvspsi.ipfs.dweb.link?filename=kenan-alajbegovic.webp' });
+  } else if (activeVictoryModal === 'phase3') {
+    setShowCelebration({ phase: 3 });
+  } else {
+    setShowCelebration(null);
+  }
+}, [activeVictoryModal]);
+
   const handleCloseVictoryModal = (modalKey: 'phase1' | 'phase2' | 'phase3' | 'finale') => {
     setDismissedModals(prev => [...prev, modalKey]);
-    setActiveVictoryModal(null);
-  };
+  setActiveVictoryModal(null);
+  setShowCelebration(null);
+};
 
   const handleStartNavigation = (name: string, lat: number, lon: number) => {
     setSelectedNavTarget({ name, lat, lon });
@@ -124,10 +138,21 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
 
   useEffect(() => {
     (window as any).startNavigationFromPopup = (name: string, lat: number, lon: number) => {
+      // Close any open popups to declutter the screen
+      const popups = document.getElementsByClassName('maplibregl-popup');
+      for (let i = 0; i < popups.length; i++) {
+        (popups[i] as HTMLElement).remove();
+      }
       handleStartNavigation(name, lat, lon);
     };
-    return () => { delete (window as any).startNavigationFromPopup; };
-  }, [activeStyle]);
+    (window as any).playQuestVideo = (videoUrl: string, title?: string) => {
+      setPlayingQuestVideo({ url: videoUrl, title: title || (lang === 'bs' ? 'Cinematic Video' : 'Cinematic Video') });
+    };
+    return () => {
+      delete (window as any).startNavigationFromPopup;
+      delete (window as any).playQuestVideo;
+    };
+  }, [activeStyle, lang]);
 
   useEffect(() => {
     globalPMTilesProtocol.init();
@@ -229,7 +254,12 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
 
       el.innerHTML = `<div class="relative flex items-center justify-center cursor-pointer group" title="${title}"><div class="w-10 h-10 rounded-2xl flex items-center justify-center shadow-2xl transition-all border-2" style="background-color: ${customPoiColor}; border-color: ${isUnlocked ? '#fef08a' : '#ffffff'}; box-shadow: 0 0 12px ${customPoiColor};"><span class="text-xs font-black text-white">${isUnlocked ? '★' : '🔒'}</span></div><div class="absolute -bottom-1 w-2.5 h-2.5 rotate-45 rounded-sm" style="background-color: ${customPoiColor};"></div></div>`;
       const marker = new maplibregl.Marker(el).setLngLat([coords.lon, coords.lat]).addTo(map.current!);
-      const popupHtml = `<div style="font-family: 'Quicksand', sans-serif; padding: 10px; background: #090d16; border-radius: 16px; color: white; width: 220px; border: 1px solid ${customPoiColor}; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7);"><div style="position: relative; overflow: hidden; border-radius: 10px; height: 100px; margin-bottom: 8px; background: #1e293b;"><img src="${imageUrl}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400'"/><div style="position: absolute; top: 4px; right: 4px; background: ${isUnlocked ? customPoiColor : 'rgba(15, 23, 42, 0.9)'}; color: #ffffff; padding: 2px 6px; border-radius: 8px; font-weight: 900; font-size: 9px;">${isUnlocked ? '★ ' + (lang === 'bs' ? 'Otključano' : 'Unlocked') : '🔒 ' + (lang === 'bs' ? 'Zaključano' : 'Locked')}</div></div><h4 style="font-weight: 800; font-size: 13px; margin: 0 0 4px 0; color: #f8fafc; line-height: 1.2;">${title}</h4><p style="font-size: 10px; margin: 0 0 10px 0; color: #94a3b8; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${description}</p><div style="display: flex; gap: 6px;"><button onclick="window.startNavigationFromPopup('${title.replace(/'/g, "\\'")}', ${coords.lat}, ${coords.lon})" style="width: 100%; background: ${customPoiColor}; border: none; border-radius: 10px; color: white; padding: 7px 0; font-weight: 800; font-size: 10px; cursor: pointer; font-family: 'Quicksand', sans-serif; box-shadow: 0 4px 12px ${customPoiColor}66;">${lang === 'bs' ? '🧭 Navigacija' : '🧭 Navigate'}</button></div></div>`;
+      const hasVideo = !!(target as any).video && isUnlocked;
+      const videoBtnHtml = hasVideo
+        ? `<button onclick="window.playQuestVideo('${(target as any).video}', '${title.replace(/'/g, "\\'")}')" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none; border-radius: 10px; color: #090d16; padding: 7px 10px; font-weight: 900; font-size: 10px; cursor: pointer; font-family: 'Quicksand', sans-serif; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4); display: flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap;">🎬 Video</button>`
+        : '';
+
+      const popupHtml = `<div style="font-family: 'Quicksand', sans-serif; padding: 10px; background: #090d16; border-radius: 16px; color: white; width: 220px; border: 1px solid ${customPoiColor}; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7);"><div style="position: relative; overflow: hidden; border-radius: 10px; height: 100px; margin-bottom: 8px; background: #1e293b;"><img src="${imageUrl}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400'"/><div style="position: absolute; top: 4px; right: 4px; background: ${isUnlocked ? customPoiColor : 'rgba(15, 23, 42, 0.9)'}; color: #ffffff; padding: 2px 6px; border-radius: 8px; font-weight: 900; font-size: 9px;">${isUnlocked ? '★ ' + (lang === 'bs' ? 'Otključano' : 'Unlocked') : '🔒 ' + (lang === 'bs' ? 'Zaključano' : 'Locked')}</div></div><h4 style="font-weight: 800; font-size: 13px; margin: 0 0 4px 0; color: #f8fafc; line-height: 1.2;">${title}</h4><p style="font-size: 10px; margin: 0 0 10px 0; color: #94a3b8; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${description}</p><div style="display: flex; gap: 6px;"><button onclick="window.startNavigationFromPopup('${title.replace(/'/g, "\\'")}', ${coords.lat}, ${coords.lon})" style="flex: 1; background: ${customPoiColor}; border: none; border-radius: 10px; color: white; padding: 7px 0; font-weight: 800; font-size: 10px; cursor: pointer; font-family: 'Quicksand', sans-serif; box-shadow: 0 4px 12px ${customPoiColor}66;">${lang === 'bs' ? '🧭 Navigacija' : '🧭 Navigate'}</button>${videoBtnHtml}</div></div>`;
       const popup = new maplibregl.Popup({ offset: 25, closeButton: false, maxWidth: '240px' }).setHTML(popupHtml);
       marker.setPopup(popup);
       markersRef.current[target.id] = marker;
@@ -512,6 +542,13 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
           </div>
         )}
       </AnimatePresence>
+{showCelebration && (
+  <CelebrationOverlay
+    phase={showCelebration.phase}
+    rewardUrl={showCelebration.rewardUrl}
+    onClose={() => setShowCelebration(null)}
+  />
+)}
 
       {/* TOP HUD CONTAINER WITH HIDE / SHOW ANIMATION */}
       <div
@@ -705,7 +742,78 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
       </AnimatePresence>
 
       <NavigationHud isNavigating={isNavigating} selectedNavTarget={selectedNavTarget} lang={lang} routeDistance={routeDistance} routeTime={routeTime} isRouteLoading={isRouteLoading} onEndNavigation={handleEndNavigation} />
-      <QrScannerModal isOpen={isScannerOpen} onClose={() => setIsScannerOpen(false)} lang={lang} unlockedRewards={unlockedRewards} onRewardFound={onRewardFound} />
+      <QrScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        lang={lang}
+        unlockedRewards={unlockedRewards}
+        onRewardFound={onRewardFound}
+        onSelectVideo={(videoUrl) => {
+          const target = QUEST_TARGETS.find(q => (q as any).video === videoUrl);
+          const name = target ? (target.name[lang as keyof typeof target.name] || target.name.en || target.name.bs) : 'Cinematic Video';
+          setPlayingQuestVideo({ url: videoUrl, title: name });
+        }}
+      />
+
+      {/* Direct Video Overlay in Map View */}
+      <AnimatePresence>
+        {playingQuestVideo && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[7000] bg-slate-950/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 sm:p-6"
+          >
+            <div className="w-full max-w-2xl bg-black border border-white/15 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col">
+              <div className="p-4 sm:p-5 flex items-center justify-between border-b border-white/10 bg-white/5">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-amber-400/20 text-amber-400 flex items-center justify-center border border-amber-400/30">
+                    <Play className="w-4 h-4 fill-amber-400" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-amber-400 tracking-wider block">
+                      {lang === 'bs' ? 'Cinematic Video' : 'Cinematic Video'}
+                    </span>
+                    <h3 className="text-base font-black text-white uppercase tracking-tight">
+                      {playingQuestVideo.title}
+                    </h3>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setPlayingQuestVideo(null)}
+                  className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="relative w-full aspect-video sm:max-h-[60vh] bg-black flex items-center justify-center">
+                <video
+                  src={playingQuestVideo.url}
+                  autoPlay
+                  controls
+                  playsInline
+                  preload="auto"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+
+              <div className="p-4 border-t border-white/10 bg-white/5 flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-400">
+                  {lang === 'bs' ? 'Tuzla Tour Audio-Vizuelni Vodič' : 'Tuzla Tour Audio-Visual Guide'}
+                </span>
+                <button
+                  onClick={() => setPlayingQuestVideo(null)}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 font-black text-xs uppercase tracking-wider hover:scale-105 active:scale-95 transition-all"
+                >
+                  {lang === 'bs' ? 'Zatvori Video' : 'Close Video'}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

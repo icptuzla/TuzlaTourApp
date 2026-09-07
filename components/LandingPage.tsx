@@ -15,7 +15,11 @@ import {
   Facebook,
   Linkedin,
   Share2,
-  ArrowDown
+  ArrowDown,
+  Volume2,
+  VolumeX,
+  RotateCcw,
+  Loader2
 } from 'lucide-react';
 import { useImage } from '../hooks/ImageContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -120,6 +124,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ lang, onNavigate }) => {
   const [heroLoopCount, setHeroLoopCount] = useState(0);
   const [isHeroPlaying, setIsHeroPlaying] = useState(false);
   const [isHeroReady, setIsHeroReady] = useState(false);
+  const [isHeroMuted, setIsHeroMuted] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
+  const [hasVideoEnded, setHasVideoEnded] = useState(false);
   const heroVideoRef = useRef<HTMLVideoElement>(null);
   const cardsSectionRef = useRef<HTMLElement>(null);
   const cleanSrc = (src?: string) => {
@@ -139,16 +146,63 @@ const LandingPage: React.FC<LandingPageProps> = ({ lang, onNavigate }) => {
     if (heroVideoRef.current) {
       if (isHeroPlaying) {
         heroVideoRef.current.pause();
+        setIsHeroPlaying(false);
       } else {
-        heroVideoRef.current.play();
-        setHeroLoopCount(0); // Reset count if manual play
+        setIsBuffering(true);
+        setHasVideoEnded(false);
+        const playPromise = heroVideoRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              setIsHeroPlaying(true);
+              setIsBuffering(false);
+              setHeroLoopCount(0);
+            })
+            .catch((error) => {
+              console.warn("Autoplay with audio was blocked or interrupted, trying muted playback:", error);
+              if (heroVideoRef.current) {
+                heroVideoRef.current.muted = true;
+                setIsHeroMuted(true);
+                heroVideoRef.current.play()
+                  .then(() => {
+                    setIsHeroPlaying(true);
+                    setIsBuffering(false);
+                  })
+                  .catch((err) => {
+                    console.error("Video playback failed completely:", err);
+                    setIsHeroPlaying(false);
+                    setIsBuffering(false);
+                  });
+              }
+            });
+        } else {
+          setIsHeroPlaying(true);
+          setIsBuffering(false);
+        }
       }
-      setIsHeroPlaying(!isHeroPlaying);
+    }
+  };
+
+  const toggleMute = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (heroVideoRef.current) {
+      heroVideoRef.current.muted = !isHeroMuted;
+      setIsHeroMuted(!isHeroMuted);
     }
   };
 
   const handleHeroVideoEnd = () => {
     setIsHeroPlaying(false);
+    setHasVideoEnded(true);
+  };
+
+  const handleReplay = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (heroVideoRef.current) {
+      heroVideoRef.current.currentTime = 0;
+      setHasVideoEnded(false);
+      toggleHeroVideo();
+    }
   };
 
   const handleVideoError = () => {
@@ -156,8 +210,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ lang, onNavigate }) => {
     if (videoSrc !== fallback) {
       console.warn(`Video failed to load from ${videoSrc}. Falling back to local asset: ${fallback}`);
       setVideoSrc(fallback);
+      if (heroVideoRef.current) {
+        heroVideoRef.current.load();
+      }
     } else {
       console.error("Local fallback video also failed to load.");
+      setIsBuffering(false);
     }
   };
 
@@ -379,8 +437,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ lang, onNavigate }) => {
             </h2>
             <div className="w-16 h-2 bg-blue-600 rounded-full mt-2 mx-auto" />
           </div>
-          <div className="relative w-[350px] h-[700px] border-[14px] border-slate-900 rounded-[3rem] bg-black shadow-2xl overflow-hidden ring-4 ring-slate-800">
-            <div className="absolute top-0 inset-x-0 h-6 bg-slate-900 rounded-b-2xl w-32 mx-auto z-30"></div>
+          <div 
+            onClick={toggleHeroVideo}
+            className="relative w-[340px] sm:w-[360px] h-[680px] sm:h-[720px] border-[14px] border-slate-900 rounded-[3rem] bg-black shadow-2xl overflow-hidden ring-4 ring-slate-800 cursor-pointer group select-none"
+          >
+            {/* Speaker notch */}
+            <div className="absolute top-0 inset-x-0 h-6 bg-slate-900 rounded-b-2xl w-32 mx-auto z-30 flex items-center justify-center">
+              <div className="w-12 h-1 bg-slate-800 rounded-full" />
+            </div>
+
+            {/* Video element */}
             <video
               ref={heroVideoRef}
               playsInline
@@ -388,11 +454,28 @@ const LandingPage: React.FC<LandingPageProps> = ({ lang, onNavigate }) => {
               src={videoSrc}
               onEnded={handleHeroVideoEnd}
               onError={handleVideoError}
-              preload="none"
+              onWaiting={() => setIsBuffering(true)}
+              onPlaying={() => setIsBuffering(false)}
+              onCanPlay={() => {
+                setIsHeroReady(true);
+                setIsBuffering(false);
+              }}
+              preload="metadata"
             />
-            {/* Black cover hides native browser play button */}
+
+            {/* Buffering Spinner */}
+            {isBuffering && (
+              <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
+                <div className="p-4 rounded-2xl bg-black/70 border border-white/10 flex flex-col items-center gap-2">
+                  <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
+                  <span className="text-[11px] font-black uppercase text-white tracking-widest">Loading...</span>
+                </div>
+              </div>
+            )}
+
+            {/* Cover image when paused or not started */}
             <AnimatePresence>
-              {!isHeroPlaying && (
+              {!isHeroPlaying && !hasVideoEnded && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -401,30 +484,79 @@ const LandingPage: React.FC<LandingPageProps> = ({ lang, onNavigate }) => {
                 >
                   <img
                     src="/assets/Gallery/QuestQRLocations/tuzhero.webp"
-                    alt=""
-                    className="absolute inset-0 w-full h-full object-cover opacity-40"
+                    alt="Tuzla Video Preview"
+                    className="absolute inset-0 w-full h-full object-cover opacity-60"
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
+                  
+                  {/* Play trigger button */}
+                  <div className="relative z-20 flex flex-col items-center gap-3">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleHeroVideo();
+                      }}
+                      className="w-20 h-20 bg-gradient-to-tr from-amber-400 to-yellow-400 border-2 border-yellow-200 rounded-full flex items-center justify-center text-slate-950 shadow-[0_0_30px_rgba(251,191,36,0.6)] hover:scale-110 active:scale-95 transition-all"
+                    >
+                      <Play className="w-9 h-9 fill-slate-950 ml-1" />
+                    </button>
+                    <span className="text-xs font-black uppercase tracking-widest text-white drop-shadow-md bg-black/50 px-3 py-1 rounded-full border border-white/20">
+                      Play Video
+                    </span>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
-            {/* Custom play button always on top */}
+
+            {/* Replay Overlay */}
             <AnimatePresence>
-              {!isHeroPlaying && (
+              {hasVideoEnded && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="absolute inset-0 flex items-center justify-center z-20"
+                  className="absolute inset-0 z-10 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center gap-4 p-6"
                 >
                   <button
-                    onClick={toggleHeroVideo}
-                    className="w-16 h-16 bg-white/20 backdrop-blur-md border border-white/40 rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all hover:scale-110 active:scale-95"
+                    onClick={handleReplay}
+                    className="w-18 h-18 bg-gradient-to-tr from-amber-400 to-yellow-400 border-2 border-yellow-200 rounded-full flex items-center justify-center text-slate-950 shadow-[0_0_30px_rgba(251,191,36,0.6)] hover:scale-110 active:scale-95 transition-all"
                   >
-                    <Play className="w-8 h-8 fill-current ml-1" />
+                    <RotateCcw className="w-8 h-8" />
                   </button>
+                  <span className="text-sm font-black uppercase tracking-widest text-white">
+                    Watch Again
+                  </span>
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* Interactive Control Overlay Bar when Playing */}
+            {isHeroPlaying && (
+              <div 
+                onClick={(e) => e.stopPropagation()}
+                className="absolute bottom-4 inset-x-4 z-20 p-2.5 rounded-2xl bg-black/60 backdrop-blur-md border border-white/10 flex items-center justify-between text-white transition-opacity duration-300 opacity-90 hover:opacity-100"
+              >
+                <button
+                  onClick={toggleHeroVideo}
+                  className="p-2 rounded-xl hover:bg-white/20 transition-colors"
+                  aria-label="Pause"
+                >
+                  <Pause className="w-5 h-5 fill-white" />
+                </button>
+
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-400">
+                  Tuzla Tour HD
+                </span>
+
+                <button
+                  onClick={toggleMute}
+                  className="p-2 rounded-xl hover:bg-white/20 transition-colors"
+                  aria-label={isHeroMuted ? "Unmute" : "Mute"}
+                >
+                  {isHeroMuted ? <VolumeX className="w-5 h-5 text-amber-400" /> : <Volume2 className="w-5 h-5" />}
+                </button>
+              </div>
+            )}
           </div>
         </section>
 

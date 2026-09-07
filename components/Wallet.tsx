@@ -597,26 +597,48 @@ const WalletContent: React.FC<{
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[7000] bg-black flex flex-col p-6"
+                        className="fixed inset-0 z-[7000] bg-slate-950/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 sm:p-6"
                     >
-                        <div className="flex-grow flex items-center justify-center bg-black">
-                            <video
-                                src={playingVideo}
-                                autoPlay
-                                controls
-                                playsInline
-                                className="w-full max-h-[70vh] rounded-[2.5rem] bg-black shadow-[0_50px_100px_-20px_rgba(0,0,0,0.8)] border border-white/10"
-                            />
-                        </div>
+                        <div className="w-full max-w-2xl bg-black border border-white/15 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col">
+                            <div className="p-4 sm:p-5 flex items-center justify-between border-b border-white/10 bg-white/5">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-xl bg-amber-400/20 text-amber-400 flex items-center justify-center border border-amber-400/30">
+                                        <Play className="w-4 h-4 fill-amber-400" />
+                                    </div>
+                                    <h3 className="text-base font-black text-white uppercase tracking-tight">
+                                        {t.watchCinematic}
+                                    </h3>
+                                </div>
+                                <button
+                                    onClick={() => setPlayingVideo(null)}
+                                    className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
 
-                        <div className="h-48 flex flex-col items-center justify-center gap-6">
-                            <h2 className="text-white font-black text-2xl uppercase tracking-tighter text-center">{t.watchCinematic}</h2>
-                            <button
-                                onClick={() => setPlayingVideo(null)}
-                                className="px-12 py-5 bg-white text-slate-950 rounded-2xl font-black uppercase text-xs tracking-widest hover:scale-105 active:scale-95 transition-all"
-                            >
-                                {t.closeVideo}
-                            </button>
+                            <div className="relative w-full aspect-video sm:max-h-[60vh] bg-black flex items-center justify-center">
+                                <video
+                                    src={playingVideo}
+                                    autoPlay
+                                    controls
+                                    playsInline
+                                    preload="auto"
+                                    className="w-full h-full object-contain"
+                                />
+                            </div>
+
+                            <div className="p-4 border-t border-white/10 bg-white/5 flex items-center justify-between">
+                                <span className="text-xs font-bold text-slate-400">
+                                    {t.watchCinematic}
+                                </span>
+                                <button
+                                    onClick={() => setPlayingVideo(null)}
+                                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 font-black text-xs uppercase tracking-wider hover:scale-105 active:scale-95 transition-all"
+                                >
+                                    {t.closeVideo}
+                                </button>
+                            </div>
                         </div>
                     </motion.div>
                 )}

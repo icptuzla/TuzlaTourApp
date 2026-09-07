@@ -31,6 +31,7 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
   scannerFps = 15,
 }) => {
   const [scannerFeedback, setScannerFeedback] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [activeVideoModal, setActiveVideoModal] = useState<{ url: string; title: string } | null>(null);
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const scannerContainerId = 'map-quest-reader';
 
@@ -284,19 +285,24 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
                   <div className="grid grid-cols-1 gap-4">
                     {unlockedItems.map((item) => {
                       const isNFTItem = NFT_REWARD_IDS.includes(item.id);
+                      const itemName = item.name[lang as keyof typeof item.name] || item.name.en || item.name.bs;
                       return (
                         <div key={item.id} className="flex flex-col gap-2">
                           <motion.div
                             layout
-                            className="group relative h-32 rounded-3xl overflow-hidden border border-amber-400/40 bg-white/5 shadow-xl transition-all active:scale-95"
+                            className="group relative h-32 rounded-3xl overflow-hidden border border-amber-400/40 bg-white/5 shadow-xl transition-all active:scale-95 cursor-pointer"
                             onClick={() => {
-                              if (item.video && onSelectVideo) onSelectVideo(item.video);
-                              else if ((item as any).website) window.open((item as any).website, '_blank');
+                              if (item.video) {
+                                setActiveVideoModal({ url: item.video, title: itemName });
+                                if (onSelectVideo) onSelectVideo(item.video);
+                              } else if ((item as any).website) {
+                                window.open((item as any).website, '_blank');
+                              }
                             }}
                           >
                             <img
                               src={item.Image}
-                              alt={item.name.en}
+                              alt={itemName}
                               className={`w-full h-full object-cover brightness-[0.7] ${
                                 isUtilityMode ? '' : 'group-hover:brightness-100 transition-all duration-500'
                               }`}
@@ -306,11 +312,11 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
                                 {lang === 'bs' ? 'Otključano' : 'Unlocked'}
                               </span>
                               <h3 className="text-lg font-black text-white uppercase leading-none tracking-tight">
-                                {item.name.en}
+                                {itemName}
                               </h3>
                             </div>
                             {item.video && (
-                              <div className="absolute right-6 top-1/2 -translate-y-1/2 w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/40">
+                              <div className="absolute right-6 top-1/2 -translate-y-1/2 w-12 h-12 bg-gradient-to-tr from-amber-400 to-yellow-400 border border-yellow-200 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/40 group-hover:scale-110 transition-transform">
                                 <Play className="w-5 h-5 text-slate-950 fill-slate-950 ml-0.5" />
                               </div>
                             )}
@@ -428,6 +434,69 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
               <span className="text-base font-black uppercase leading-none tracking-tight">
                 {scannerFeedback.text}
               </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* UNLOCKED POI CINEMATIC VIDEO MODAL */}
+      <AnimatePresence>
+        {activeVideoModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[7000] bg-slate-950/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 sm:p-6"
+          >
+            <div className="w-full max-w-2xl bg-black border border-white/15 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col">
+              {/* Header */}
+              <div className="p-4 sm:p-5 flex items-center justify-between border-b border-white/10 bg-white/5">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-amber-400/20 text-amber-400 flex items-center justify-center border border-amber-400/30">
+                    <Play className="w-4 h-4 fill-amber-400" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-amber-400 tracking-wider block">
+                      {lang === 'bs' ? 'Cinematic Video' : 'Cinematic Video'}
+                    </span>
+                    <h3 className="text-base font-black text-white uppercase tracking-tight">
+                      {activeVideoModal.title}
+                    </h3>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setActiveVideoModal(null)}
+                  className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Video Player */}
+              <div className="relative w-full aspect-video sm:max-h-[60vh] bg-black flex items-center justify-center">
+                <video
+                  src={activeVideoModal.url}
+                  autoPlay
+                  controls
+                  playsInline
+                  preload="auto"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 border-t border-white/10 bg-white/5 flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-400">
+                  {lang === 'bs' ? 'Tuzla Tour Audio-Vizuelni Vodič' : 'Tuzla Tour Audio-Visual Guide'}
+                </span>
+                <button
+                  onClick={() => setActiveVideoModal(null)}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 font-black text-xs uppercase tracking-wider hover:scale-105 active:scale-95 transition-all"
+                >
+                  {lang === 'bs' ? 'Zatvori Video' : 'Close Video'}
+                </button>
+              </div>
             </div>
           </motion.div>
         )}

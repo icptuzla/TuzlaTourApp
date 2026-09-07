@@ -27,10 +27,16 @@ export const generateQuestPopupHtml = (loc: any, lang: Language, isUnlocked: boo
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
-        <button onclick="window.setGlobalMapNavTarget('${loc.id}')" style="width: 100%; padding: 12px; background: ${isUnlocked ? markerColor : '#1e293b'}; color: white; border: none; border-radius: 12px; font-weight: 900; font-family: 'Quicksand', sans-serif; cursor: pointer; text-transform: uppercase; font-size: 11px; letter-spacing: 0.1em;">
-          GPS Navigation
+        <button onclick="window.setGlobalMapNavTarget ? window.setGlobalMapNavTarget('${loc.id}') : (window.startNavigationFromPopup && window.startNavigationFromPopup('${loc.name[lang] || loc.name.bs}', ${loc.coordinates ? loc.coordinates[0] : 0}, ${loc.coordinates ? loc.coordinates[1] : 0}))" style="width: 100%; padding: 12px; background: ${isUnlocked ? markerColor : '#1e293b'}; color: white; border: none; border-radius: 12px; font-weight: 900; font-family: 'Quicksand', sans-serif; cursor: pointer; text-transform: uppercase; font-size: 11px; letter-spacing: 0.1em;">
+          ${lang === 'bs' ? '🧭 GPS Navigacija' : '🧭 GPS Navigation'}
         </button>
         
+        ${isUnlocked && (loc.video || loc.id === 'mesa_selimovic') ? `
+          <button onclick="window.playQuestVideo && window.playQuestVideo('${loc.video || '/assets/Gallery/QuestQRLocations/MesaSelimovic.mp4'}', '${(loc.name[lang] || loc.name.bs || 'Meša Selimović').replace(/'/g, "\\'")}')" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #f59e0b, #d97706); color: #0f172a; border: none; border-radius: 12px; font-weight: 900; font-family: 'Quicksand', sans-serif; cursor: pointer; text-transform: uppercase; font-size: 11px; box-shadow: 0 4px 12px rgba(245,158,11,0.4);">
+            🎬 ${lang === 'bs' ? 'Pogledaj Video' : 'Watch Cinematic'}
+          </button>
+        ` : ''}
+
         ${isNFTReward && isUnlocked ? `
           <button onclick="window.mintNFTReward('${NFT_IPFS}')" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #7c3aed, #a855f7); color: white; border: none; border-radius: 12px; font-weight: 900; font-family: 'Quicksand', sans-serif; cursor: pointer; text-transform: uppercase; font-size: 11px;">
             🎖️ MINT NFT REWARD
