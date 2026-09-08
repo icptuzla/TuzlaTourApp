@@ -27,10 +27,10 @@
     {
       "id": "pmtiles-earth",
       "type": "fill",
-      "source": "tuzla-pmtiles",
+      "source": "tuzla.pmtiles",
       "source-layer": "earth",
       "minzoom": 0,
-      "maxzoom": 15,
+      "maxzoom": 16,
       "paint": {
         "fill-color": "#f1f4e8"
       }
@@ -38,10 +38,10 @@
     {
       "id": "pmtiles-landuse",
       "type": "fill",
-      "source": "tuzla-pmtiles",
+      "source": "tuzla.pmtiles",
       "source-layer": "landuse",
       "minzoom": 0,
-      "maxzoom": 15,
+      "maxzoom": 16,
       "paint": {
         "fill-color": "#e2ded5",
         "fill-opacity": 0.4
@@ -50,10 +50,10 @@
     {
       "id": "pmtiles-landcover",
       "type": "fill",
-      "source": "tuzla-pmtiles",
+      "source": "tuzla.pmtiles",
       "source-layer": "landcover",
       "minzoom": 8,
-      "maxzoom": 15,
+      "maxzoom": 16,
       "paint": {
         "fill-color": "#d2eec4",
         "fill-opacity": 0.55
@@ -62,15 +62,33 @@
     {
       "id": "pmtiles-water-lakes",
       "type": "fill",
-      "source": "tuzla-pmtiles",
+      "source": "tuzla.pmtiles",
       "source-layer": "water",
       "minzoom": 0,
-      "maxzoom": 15,
+      "maxzoom": 16,
       "filter": [
         "all",
-        ["==", "$type", "Polygon"],
-        ["!=", ["get", "kind"], "river"],
-        ["!=", ["get", "kind_detail"], "river"]
+        [
+          "==",
+          "$type",
+          "Polygon"
+        ],
+        [
+          "!=",
+          [
+            "get",
+            "kind"
+          ],
+          "river"
+        ],
+        [
+          "!=",
+          [
+            "get",
+            "kind_detail"
+          ],
+          "river"
+        ]
       ],
       "paint": {
         "fill-color": "#67b6eb",
@@ -80,24 +98,36 @@
     {
       "id": "pmtiles-waterways-casing",
       "type": "line",
-      "source": "tuzla-pmtiles",
+      "source": "tuzla.pmtiles",
       "source-layer": "water",
       "minzoom": 10,
-      "maxzoom": 15,
+      "maxzoom": 16,
       "filter": [
         "all",
-        ["==", "$type", "LineString"]
+        [
+          "==",
+          "$type",
+          "LineString"
+        ]
       ],
       "paint": {
         "line-color": "#4aa9df",
         "line-width": [
           "interpolate",
-          ["linear"],
-          ["zoom"],
-          10, 1.2,
-          12, 2.2,
-          14, 4.0,
-          15, 5.5
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          10,
+          1.2,
+          12,
+          2.2,
+          14,
+          4.0,
+          15,
+          5.5
         ],
         "line-opacity": 0.85
       }
@@ -105,24 +135,36 @@
     {
       "id": "pmtiles-waterways",
       "type": "line",
-      "source": "tuzla-pmtiles",
+      "source": "tuzla.pmtiles",
       "source-layer": "water",
       "minzoom": 10,
       "maxzoom": 15,
       "filter": [
         "all",
-        ["==", "$type", "LineString"]
+        [
+          "==",
+          "$type",
+          "LineString"
+        ]
       ],
       "paint": {
         "line-color": "#81caf7",
         "line-width": [
           "interpolate",
-          ["linear"],
-          ["zoom"],
-          10, 0.8,
-          12, 1.5,
-          14, 2.5,
-          15, 3.5
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          10,
+          0.8,
+          12,
+          1.5,
+          14,
+          2.5,
+          15,
+          3.5
         ],
         "line-opacity": 0.95
       }
@@ -130,48 +172,71 @@
     {
       "id": "pmtiles-roads-casing",
       "type": "line",
-      "source": "tuzla-pmtiles",
+      "source": "tuzla.pmtiles",
       "source-layer": "roads",
       "minzoom": 0,
-      "maxzoom": 15,
+      "maxzoom": 16,
       "paint": {
         "line-color": "#cbbca8",
         "line-width": [
           "interpolate",
-          ["linear"],
-          ["zoom"],
-          0, 0.5,
-          10, 2.2,
-          14, 4.5,
-          15, 6.0
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          0,
+          0.5,
+          10,
+          2.2,
+          14,
+          4.5,
+          15,
+          6.0
         ]
       }
     },
     {
       "id": "pmtiles-roads",
       "type": "line",
-      "source": "tuzla-pmtiles",
+      "source": "tuzla.pmtiles",
       "source-layer": "roads",
       "minzoom": 3,
-      "maxzoom": 15,
+      "maxzoom": 16,
       "paint": {
         "line-color": [
           "match",
-          ["get", "kind"],
-          "highway", "#f5be57",
-          "major_road", "#fae09d",
-          "minor_road", "#ffffff",
-          "path", "#d5cbba",
+          [
+            "get",
+            "kind"
+          ],
+          "highway",
+          "#f5be57",
+          "major_road",
+          "#fae09d",
+          "minor_road",
+          "#ffffff",
+          "path",
+          "#d5cbba",
           "#fbf8f2"
         ],
         "line-width": [
           "interpolate",
-          ["linear"],
-          ["zoom"],
-          3, 0.5,
-          10, 1.2,
-          14, 2.8,
-          15, 4.2
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          3,
+          0.5,
+          10,
+          1.2,
+          14,
+          2.8,
+          15,
+          4.2
         ]
       }
     },
@@ -186,14 +251,26 @@
         "fill-extrusion-color": "#cbd2d9",
         "fill-extrusion-height": [
           "coalesce",
-          ["get", "render_height"],
-          ["get", "height"],
+          [
+            "get",
+            "render_height"
+          ],
+          [
+            "get",
+            "height"
+          ],
           10
         ],
         "fill-extrusion-base": [
           "coalesce",
-          ["get", "render_min_height"],
-          ["get", "min_height"],
+          [
+            "get",
+            "render_min_height"
+          ],
+          [
+            "get",
+            "min_height"
+          ],
           0
         ],
         "fill-extrusion-opacity": 0.75

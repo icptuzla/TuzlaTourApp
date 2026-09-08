@@ -99,6 +99,6 @@
     "usb@2.18.0": true,
     "node": true,
     "@google/genai@2.19.0": true,
-    "esbuild@0.27.0": true
+    "esbuild@0.25.12": true
   }
 }

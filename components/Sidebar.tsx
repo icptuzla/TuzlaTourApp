@@ -181,7 +181,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, activeTab, onSelectT
                   <Compass className="w-4.5 h-4.5 text-white" />
                 </div>
                 <span className="font-quicksand font-black text-lg tracking-tight bg-gradient-to-r from-blue-900 to-blue-700 bg-clip-text text-transparent">
-                  Tuzla Tour
+                  Tuzla Tour Guide
                 </span>
               </div>
 
@@ -209,13 +209,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, activeTab, onSelectT
                     whileHover={{ x: 3, scale: 1.01 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => { handleSelect(item.id); }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all duration-200 group text-left border relative overflow-hidden ${
-                      isSubItem ? 'ml-4 w-[calc(100%-1rem)] py-1.5 px-2.5' : ''
-                    } ${
-                      isActive
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all duration-200 group text-left border relative overflow-hidden ${isSubItem ? 'ml-4 w-[calc(100%-1rem)] py-1.5 px-2.5' : ''
+                      } ${isActive
                         ? `${item.activeClass} ${item.activeGlow} ${item.activeBorder} scale-[1.01]`
                         : `${item.inactiveClass} ${item.inactiveBorderClass} shadow-sm hover:shadow-md`
-                    }`}
+                      }`}
                   >
                     {/* Active side indicator accent */}
                     {isActive && (
@@ -226,21 +224,19 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, activeTab, onSelectT
                       />
                     )}
 
-                    <div className={`p-1 rounded-lg transition-all duration-200 ${
-                      isActive
+                    <div className={`p-1 rounded-lg transition-all duration-200 ${isActive
                         ? 'bg-slate-950/10 text-slate-950'
                         : `${item.inactiveIconClass} group-hover:scale-105`
-                    }`}>
+                      }`}>
                       <Icon className={`w-4.5 h-4.5 transition-transform duration-200 ${isActive ? 'scale-105' : ''}`} />
                     </div>
 
-                    <span className={`tracking-wide transition-colors flex-1 ${
-                      isHeader
+                    <span className={`tracking-wide transition-colors flex-1 ${isHeader
                         ? 'text-sm font-black uppercase tracking-wider'
                         : isSubItem
-                        ? 'text-xs font-bold'
-                        : 'text-xs font-extrabold'
-                    }`}>
+                          ? 'text-xs font-bold'
+                          : 'text-xs font-extrabold'
+                      }`}>
                       {label}
                     </span>
 

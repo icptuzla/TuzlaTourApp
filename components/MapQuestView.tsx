@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { globalPMTilesProtocol } from '../utils/pmtilesProtocol.ts';
+import { globalPMTilesProtocol, ensureTuzlaOfflineMapDownloaded } from '../utils/pmtilesProtocol.ts';
 import { motion, AnimatePresence } from 'framer-motion';
-import CelebrationOverlay from './CelebrationOverlay';
+import CelebrationOverlay from './CelebrationOverlay.tsx';
 import { QrCode, Navigation, Route, Info, X, Compass, Landmark, Hotel as HotelIcon, Trophy, Layers, Check, ChevronUp, ChevronDown, Play } from 'lucide-react';
 import { AppFeatures } from '../utils/platform.ts';
 import { Language } from '../types.ts';
@@ -77,7 +77,7 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
   const [showRules, setShowRules] = useState(false);
   const [isHudHidden, setIsHudHidden] = useState(false);
   const [activeVictoryModal, setActiveVictoryModal] = useState<'phase1' | 'phase2' | 'phase3' | 'finale' | null>(null);
-const [showCelebration, setShowCelebration] = useState<{ phase: number; rewardUrl?: string } | null>(null);
+  const [showCelebration, setShowCelebration] = useState<{ phase: number; rewardUrl?: string } | null>(null);
   const [dismissedModals, setDismissedModals] = useState<string[]>([]);
 
   const isPhase1Done = PHASE_1_POIS.every(id => isPoiRewardUnlocked(id, unlockedRewards));
@@ -93,21 +93,21 @@ const [showCelebration, setShowCelebration] = useState<{ phase: number; rewardUr
     else if (isPhase1Done && !dismissedModals.includes('phase1')) setActiveVictoryModal('phase1');
   }, [isPhase1Done, isPhase2Done, isPhase3Done, isGrandFinaleDone, dismissedModals]);
 
-useEffect(() => {
-  if (activeVictoryModal === 'phase2') {
-    setShowCelebration({ phase: 2, rewardUrl: 'https://bafybeibd5ee6pjvkhn3kuitcclb5zjqdwo23yvprfwsaabcctylesvspsi.ipfs.dweb.link?filename=kenan-alajbegovic.webp' });
-  } else if (activeVictoryModal === 'phase3') {
-    setShowCelebration({ phase: 3 });
-  } else {
-    setShowCelebration(null);
-  }
-}, [activeVictoryModal]);
+  useEffect(() => {
+    if (activeVictoryModal === 'phase2') {
+      setShowCelebration({ phase: 2, rewardUrl: 'https://bafybeibd5ee6pjvkhn3kuitcclb5zjqdwo23yvprfwsaabcctylesvspsi.ipfs.dweb.link?filename=kenan-alajbegovic.webp' });
+    } else if (activeVictoryModal === 'phase3') {
+      setShowCelebration({ phase: 3 });
+    } else {
+      setShowCelebration(null);
+    }
+  }, [activeVictoryModal]);
 
   const handleCloseVictoryModal = (modalKey: 'phase1' | 'phase2' | 'phase3' | 'finale') => {
     setDismissedModals(prev => [...prev, modalKey]);
-  setActiveVictoryModal(null);
-  setShowCelebration(null);
-};
+    setActiveVictoryModal(null);
+    setShowCelebration(null);
+  };
 
   const handleStartNavigation = (name: string, lat: number, lon: number) => {
     setSelectedNavTarget({ name, lat, lon });
@@ -156,22 +156,23 @@ useEffect(() => {
 
   useEffect(() => {
     globalPMTilesProtocol.init();
+    ensureTuzlaOfflineMapDownloaded().catch((err) => console.warn('Offline cache init:', err));
   }, []);
 
   const applyGeoapifyPaintOverrides = (mapInstance: maplibregl.Map) => {
     const safeSet = (layerId: string, prop: string, value: any) => {
       try { if (mapInstance.getLayer(layerId)) mapInstance.setPaintProperty(layerId, prop, value); } catch (_) { }
     };
-    safeSet('background', 'background-color', '#eff1e3');
-    safeSet('landuse-residential', 'fill-color', '#e0d9ce');
+    safeSet('background', 'background-color', '#d3e6b4ff');
+    safeSet('landuse-residential', 'fill-color', '#fcf5f6ff');
     safeSet('landcover_grass', 'fill-color', '#c5f179');
-    safeSet('park', 'fill-color', 'rgba(175,214,108,0.53)');
-    safeSet('landcover_wood', 'fill-color', '#bcda89');
-    safeSet('road_path', 'line-color', '#adadad');
+    safeSet('park', 'fill-color', 'rgba(163, 219, 65, 0.82)');
+    safeSet('landcover_wood', 'fill-color', '#758d4bff');
+    safeSet('road_path', 'line-color', '#9e9a9aff');
     safeSet('road_minor', 'line-color', '#ffffff');
     safeSet('road_trunk_primary', 'line-color', '#f7dcb2');
     safeSet('road_secondary_tertiary', 'line-color', '#fff299');
-    safeSet('building-3d', 'fill-extrusion-color', '#95a6c0ff');
+    safeSet('building-3d', 'fill-extrusion-color', '#8098bdff');
   };
 
   useEffect(() => {
@@ -197,10 +198,11 @@ useEffect(() => {
     mapInstance.on('styledata', () => {
       if (map.current && activeStyle === GEOAPIFY_MAPTILER_3D) applyGeoapifyPaintOverrides(map.current);
     });
-    mapInstance.on('error', (e) => {
+    mapInstance.on('error', async (e) => {
       const msg = e.error?.message || '';
       console.warn('🗺️ Map style error:', msg);
       if (!navigator.onLine && !isOfflineMode) {
+        await ensureTuzlaOfflineMapDownloaded();
         setIsOfflineMode(true);
         setActiveStyle(OFFLINE_STYLE);
         mapInstance.setMaxZoom(15);
@@ -217,6 +219,9 @@ useEffect(() => {
 
   const handleSwitchLayer = (styleUrl: string) => {
     if (map.current) {
+      if (styleUrl === OFFLINE_STYLE) {
+        ensureTuzlaOfflineMapDownloaded().catch(() => {});
+      }
       setActiveStyle(styleUrl);
       if (styleUrl === OFFLINE_STYLE) {
         map.current.setMaxZoom(15);
@@ -542,13 +547,13 @@ useEffect(() => {
           </div>
         )}
       </AnimatePresence>
-{showCelebration && (
-  <CelebrationOverlay
-    phase={showCelebration.phase}
-    rewardUrl={showCelebration.rewardUrl}
-    onClose={() => setShowCelebration(null)}
-  />
-)}
+      {showCelebration && (
+        <CelebrationOverlay
+          phase={showCelebration.phase}
+          rewardUrl={showCelebration.rewardUrl}
+          onClose={() => setShowCelebration(null)}
+        />
+      )}
 
       {/* TOP HUD CONTAINER WITH HIDE / SHOW ANIMATION */}
       <div

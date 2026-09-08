@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { globalPMTilesProtocol } from '../utils/pmtilesProtocol';
+import { globalPMTilesProtocol, ensureTuzlaOfflineMapDownloaded } from '../utils/pmtilesProtocol';
 import { getDistance } from '../utils/geoUtils';
 import { Language } from '../types';
 import { TUZLA_CENTER } from '../constants';
@@ -156,15 +156,20 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
   const [isRouteLoading, setIsRouteLoading] = useState(false);
   const [activeModalTab, setActiveModalTab] = useState<'poi' | 'hotel' | 'qrcode'>('poi');
 
-  // Register PMTiles Protocol
+  // Register PMTiles Protocol and pre-cache Tuzla PMTiles into OPFS
   useEffect(() => {
     globalPMTilesProtocol.init();
+    ensureTuzlaOfflineMapDownloaded().catch((err) => console.warn('Offline cache init:', err));
   }, []);
 
   const handleSwitchLayer = (styleUrl: string) => {
     if (!map.current || activeStyle === styleUrl) {
       setShowLayerMenu(false);
       return;
+    }
+
+    if (styleUrl === OFFLINE_STYLE) {
+      ensureTuzlaOfflineMapDownloaded().catch(() => {});
     }
 
     setActiveStyle(styleUrl);
