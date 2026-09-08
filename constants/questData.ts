@@ -30,6 +30,7 @@ export const QUEST_TARGETS: QuestTarget[] = [
   { id: 'bingo_city_centar', name: { en: 'Bingo City Center', bs: 'Bingo City Centar' }, Html5Qrcode: '/assets/Gallery/QuestQRLocations/QRBingoCityCenter.png', Image: '/assets/Bingo-supermarket.webp', website: 'https://tuzla.bingocitycenter.ba/' },
   { id: 'mesa_selimovic', name: { en: 'Mesa Selimovic', bs: 'Meša Selimović' }, Html5Qrcode: '/assets/Gallery/QuestQRLocations/QRMesaStatue.png', Image: '/assets/Gallery/QuestQRLocations/TuzlaMesaS.webp', video: '/assets/Gallery/QuestQRLocations/MesaSelimovic.mp4' },
   { id: 'tvrtko_park', name: { en: 'King Tvrtko Park', bs: 'Park Kralja Tvrtka I' }, Html5Qrcode: '/assets/Gallery/QuestQRLocations/QRtvrtko.png', Image: '/assets/Gallery/Photos/tuzla12.webp' },
+  { id: 'panonika', name: { en: 'Pannonian Lakes', bs: 'Panonska jezera' }, Html5Qrcode: '/assets/Gallery/QuestQRLocations/QRpanonika.png', Image: '/assets/Gallery/QuestQRLocations/Panonsko jezero.png' },
 ];
 
 export const ROUTE_POI_PRESETS: RoutePoiPreset[] = [
@@ -59,12 +60,53 @@ export const POI_COLORS: Record<string, string> = {
   'bingo_city_centar': '#145a03ff',
   'salt_square': '#f59e0b',
   'palancinkara': '#ec4899',
+  'palancikara': '#ec4899',
+};
+
+export const QUEST_TARGET_COORDS: Record<string, { lat: number; lon: number }> = {
+  trg_slobode: { lat: 44.5395175, lon: 18.6749037 },
+  salt_square: { lat: 44.5382182, lon: 18.6759398 },
+  palancinkara: { lat: 44.5383762, lon: 18.6775339 },
+  palancikara: { lat: 44.5383762, lon: 18.6775339 },
+  slana_banja: { lat: 44.5378167, lon: 18.6875664 },
+  panonika: { lat: 44.5385, lon: 18.6767 },
+  slapovi: { lat: 44.5404243, lon: 18.6819408 },
+  kapija: { lat: 44.53863, lon: 18.676805 },
+  atelje_ismet: { lat: 44.5371465, lon: 18.6810454 },
+  bingo_city_centar: { lat: 44.532177, lon: 18.651743 },
+  mesa_selimovic: { lat: 44.5370993, lon: 18.6781216 },
+  tvrtko_park: { lat: 44.5380826, lon: 18.6783327 },
 };
 
 export const PHASE_1_POIS = ['trg_slobode', 'kapija', 'mesa_selimovic'];
-export const PHASE_2_POIS = ['tvrtko_park', 'palancikara', 'salt_square'];
+export const PHASE_2_POIS = ['tvrtko_park', 'palancinkara', 'salt_square'];
 export const PHASE_3_POIS = ['panonika', 'slapovi', 'slana_banja', 'atelje_ismet'];
 export const GRAND_FINALE_POIS = ['bingo_city_centar'];
+
+export function isPoiRewardUnlocked(poiId: string, unlockedRewards: string[]): boolean {
+  if (unlockedRewards.includes(poiId)) return true;
+  if (poiId === 'palancinkara' && unlockedRewards.includes('palancikara')) return true;
+  if (poiId === 'palancikara' && unlockedRewards.includes('palancinkara')) return true;
+  return false;
+}
+
+export function getPoiPhase(poiId: string): number {
+  if (PHASE_1_POIS.includes(poiId)) return 1;
+  if (PHASE_2_POIS.includes(poiId) || poiId === 'palancikara') return 2;
+  if (PHASE_3_POIS.includes(poiId)) return 3;
+  if (GRAND_FINALE_POIS.includes(poiId)) return 4;
+  return 1;
+}
+
+export function getCurrentQuestPhase(unlockedRewards: string[]): number {
+  const isP1 = PHASE_1_POIS.every(id => isPoiRewardUnlocked(id, unlockedRewards));
+  if (!isP1) return 1;
+  const isP2 = PHASE_2_POIS.every(id => isPoiRewardUnlocked(id, unlockedRewards));
+  if (!isP2) return 2;
+  const isP3 = PHASE_3_POIS.every(id => isPoiRewardUnlocked(id, unlockedRewards));
+  if (!isP3) return 3;
+  return 4;
+}
 
 export const NFT_REWARD_IDS: string[] = ["panonika"];
 

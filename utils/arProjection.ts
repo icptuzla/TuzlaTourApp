@@ -88,13 +88,56 @@ export function smoothAngle(newVal: number, prevVal: number | null, factor: numb
   return prevVal + factor * (newVal - prevVal);
 }
 
+export function computeTiltCompensatedHeading(
+  alpha: number | null,
+  beta: number | null,
+  gamma: number | null,
+  webkitCompassHeading?: number
+): number | null {
+  if (webkitCompassHeading !== undefined && webkitCompassHeading !== null) {
+    return (webkitCompassHeading + 360) % 360;
+  }
+  if (alpha === null) return null;
+  if (beta === null || gamma === null) {
+    return (360 - alpha) % 360;
+  }
+
+  const degToRad = Math.PI / 180;
+  const a = alpha * degToRad;
+  const b = beta * degToRad;
+  const g = gamma * degToRad;
+
+  const cA = Math.cos(a);
+  const sA = Math.sin(a);
+  const sB = Math.sin(b);
+  const cG = Math.cos(g);
+  const sG = Math.sin(g);
+
+  // Back-camera direction vector in horizontal ground plane
+  const worldX = -cA * sG - sA * sB * cG;
+  const worldY = -sA * sG + cA * sB * cG;
+
+  const headingRad = Math.atan2(worldX, worldY);
+  let headingDeg = (headingRad * 180) / Math.PI;
+  if (headingDeg < 0) headingDeg += 360;
+  return headingDeg;
+}
+
 export function wgs84ToEnu(poi: WGS84Location, origin: WGS84Location): ENUCoordinate {
   const originLatRad = (origin.lat * Math.PI) / 180;
   const dLatRad = ((poi.lat - origin.lat) * Math.PI) / 180;
   const dLngRad = ((poi.lng - origin.lng) * Math.PI) / 180;
   const x = WGS84_EARTH_RADIUS * dLngRad * Math.cos(originLatRad);
   const y = WGS84_EARTH_RADIUS * dLatRad;
-  const z = (poi.elevation ?? 0) - (origin.elevation ?? 0) - 1.5; // Camera eye height
+
+  // PRO FIX: When POI elevation is not explicitly given, assume it is at the same ground elevation as user.
+  // This prevents negative height discrepancies (-230m in Tuzla) that drop distant POIs underground.
+  const hasPoiElevation = poi.elevation !== undefined && poi.elevation !== null && poi.elevation !== 0;
+  const hasOriginElevation = origin.elevation !== undefined && origin.elevation !== null && origin.elevation !== 0;
+  const z = (hasPoiElevation && hasOriginElevation)
+    ? (poi.elevation! - origin.elevation! - 1.5)
+    : 0; // Eye-level optical horizon
+
   return { x, y, z };
 }
 
@@ -107,7 +150,7 @@ export function smoothHeading(newAlpha: number, prevAlpha: number | null, factor
 export function stageForDistance(distanceMeters: number): ARStage {
   if (distanceMeters < 10) return ARStage.PRECISE;
   if (distanceMeters < 50) return ARStage.TARGET_LOCK;
-  if (distanceMeters < 2000) return ARStage.DISCOVERY;
+  if (distanceMeters < 5000) return ARStage.DISCOVERY; // Extended from 2000m to 5000m for citywide visibility
   return ARStage.LONG_RANGE;
 }
 
@@ -145,23 +188,29 @@ export function projectEnuToScreen(
   const tanRelVertical = Math.tan((relativeVerticalDeg * Math.PI) / 180);
 
   const pxX = (tanRelHorizontal / tanHalfFovX) * (screen.width / 2) + screen.width / 2;
-  const pxY = screen.height / 2 - (tanRelVertical / tanHalfFovY) * (screen.height / 2);
+  const rawPxY = screen.height / 2 - (tanRelVertical / tanHalfFovY) * (screen.height / 2);
 
   const pctX = (pxX / Math.max(1, screen.width)) * 100;
-  const pctY = (pxY / Math.max(1, screen.height)) * 100;
+  let pctY = (rawPxY / Math.max(1, screen.height)) * 100;
+
+  // PRO FIX: Horizon clamping for distant POIs (100m - 5000m) so hand pitch tilts don't lose the badge
+  if (totalDist > 80) {
+    pctY = Math.min(78, Math.max(22, pctY));
+  }
 
   const isVisible =
     zCam > 0.1 &&
     Math.abs(relativeBearing) <= fovXDeg / 2 &&
-    Math.abs(relativeVerticalDeg) <= fovYDeg / 2;
+    (totalDist > 80 ? Math.abs(relativeVerticalDeg) <= 50 : Math.abs(relativeVerticalDeg) <= fovYDeg / 2);
 
-  const scale = Math.min(2.2, Math.max(0.6, 2.2 - totalDist / 80));
+  // Scaled for comfortable readability across 10m to 3000m
+  const scale = Math.min(2.0, Math.max(0.75, 2.0 - totalDist / 200));
 
   return {
     x: Math.min(150, Math.max(-50, pctX)),
     y: Math.min(150, Math.max(-50, pctY)),
     pxX,
-    pxY,
+    pxY: (pctY / 100) * screen.height,
     isVisible,
     distance: totalDist,
     stage,

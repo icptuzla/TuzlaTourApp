@@ -13,7 +13,7 @@ import { useQuestRuntimePolicy } from '../hooks/useQuestRuntimePolicy.ts';
 import { useGeolocationWatcher } from '../hooks/useGeolocationWatcher.ts';
 import { getDistance } from '../utils/geoUtils.ts';
 import { AdaptiveLowPassFilter } from '../utils/arProjection'; // PRO FIX: Import centralized filter
-import { QUEST_TARGETS, POI_COLORS, ROUTE_POI_PRESETS, PHASE_1_POIS, PHASE_2_POIS, PHASE_3_POIS, GRAND_FINALE_POIS, QUEST_GAME_RULES } from '../constants/questData.ts';
+import { QUEST_TARGETS, POI_COLORS, ROUTE_POI_PRESETS, PHASE_1_POIS, PHASE_2_POIS, PHASE_3_POIS, GRAND_FINALE_POIS, QUEST_GAME_RULES, isPoiRewardUnlocked } from '../constants/questData.ts';
 import { NavigationHud } from './NavigationHud.tsx';
 import { QrScannerModal } from './QrScannerModal.tsx';
 import ARGuide from './ARGuide.tsx';
@@ -80,10 +80,10 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
 const [showCelebration, setShowCelebration] = useState<{ phase: number; rewardUrl?: string } | null>(null);
   const [dismissedModals, setDismissedModals] = useState<string[]>([]);
 
-  const isPhase1Done = PHASE_1_POIS.every(id => unlockedRewards.includes(id));
-  const isPhase2Done = isPhase1Done && PHASE_2_POIS.every(id => unlockedRewards.includes(id));
-  const isPhase3Done = isPhase2Done && PHASE_3_POIS.every(id => unlockedRewards.includes(id));
-  const isGrandFinaleDone = isPhase3Done && GRAND_FINALE_POIS.every(id => unlockedRewards.includes(id));
+  const isPhase1Done = PHASE_1_POIS.every(id => isPoiRewardUnlocked(id, unlockedRewards));
+  const isPhase2Done = isPhase1Done && PHASE_2_POIS.every(id => isPoiRewardUnlocked(id, unlockedRewards));
+  const isPhase3Done = isPhase2Done && PHASE_3_POIS.every(id => isPoiRewardUnlocked(id, unlockedRewards));
+  const isGrandFinaleDone = isPhase3Done && GRAND_FINALE_POIS.every(id => isPoiRewardUnlocked(id, unlockedRewards));
   const currentPhase = !isPhase1Done ? 1 : !isPhase2Done ? 2 : !isPhase3Done ? 3 : 4;
 
   useEffect(() => {

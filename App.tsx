@@ -206,6 +206,9 @@ const AppContent: React.FC = () => {
                     <ARGuide
                       lang={lang}
                       features={features}
+                      unlockedRewards={unlockedRewards}
+                      onRewardFound={(id) => setUnlockedRewards((prev) => (prev.includes(id) ? prev : [...prev, id]))}
+                      initialTarget={navigationTarget}
                       onNavigate={(poi) => {
                         setNavigationTarget(poi);
                         navigateToTab(AppTab.MAP);
