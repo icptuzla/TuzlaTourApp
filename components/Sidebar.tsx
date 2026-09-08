@@ -13,7 +13,8 @@ import {
   Bed,
   X,
   History as HistoryIcon,
-  Sparkles
+  Compass,
+  Heart
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -174,10 +175,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, activeTab, onSelectT
             className="fixed top-0 left-0 h-full w-72 bg-white/95 backdrop-blur-xl z-[101] shadow-2xl flex flex-col border-r border-slate-200/80"
           >
             {/* Header */}
-            <div className="p-5 flex items-center justify-between border-b border-slate-100 bg-white/50">
+            <div className="p-4 flex items-center justify-between border-b border-slate-100 bg-white/50">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center shadow-md shadow-blue-500/30">
-                  <Sparkles className="w-4 h-4 text-white" />
+                  <Compass className="w-4.5 h-4.5 text-white" />
                 </div>
                 <span className="font-quicksand font-black text-lg tracking-tight bg-gradient-to-r from-blue-900 to-blue-700 bg-clip-text text-transparent">
                   Tuzla Tour
@@ -194,7 +195,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, activeTab, onSelectT
             </div>
 
             {/* Navigation Links */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-3.5 space-y-1.5 custom-scrollbar">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
@@ -205,14 +206,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, activeTab, onSelectT
                 return (
                   <motion.button
                     key={item.id}
-                    whileHover={{ x: 4, scale: 1.015 }}
-                    whileTap={{ scale: 0.975 }}
+                    whileHover={{ x: 3, scale: 1.01 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => { handleSelect(item.id); }}
-                    className={`w-full flex items-center gap-3.5 p-3 rounded-2xl transition-all duration-300 group text-left border relative overflow-hidden ${
-                      isSubItem ? 'ml-5 w-[calc(100%-1.25rem)] py-2.5' : ''
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all duration-200 group text-left border relative overflow-hidden ${
+                      isSubItem ? 'ml-4 w-[calc(100%-1rem)] py-1.5 px-2.5' : ''
                     } ${
                       isActive
-                        ? `${item.activeClass} ${item.activeGlow} ${item.activeBorder} scale-[1.02]`
+                        ? `${item.activeClass} ${item.activeGlow} ${item.activeBorder} scale-[1.01]`
                         : `${item.inactiveClass} ${item.inactiveBorderClass} shadow-sm hover:shadow-md`
                     }`}
                   >
@@ -220,70 +221,57 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, activeTab, onSelectT
                     {isActive && (
                       <motion.div
                         layoutId="active-nav-indicator"
-                        className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-slate-950 rounded-r-full shadow-sm"
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4.5 bg-slate-950 rounded-r-full shadow-sm"
                         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                       />
                     )}
 
-                    <div className={`p-1.5 rounded-xl transition-all duration-300 ${
+                    <div className={`p-1 rounded-lg transition-all duration-200 ${
                       isActive
                         ? 'bg-slate-950/10 text-slate-950'
-                        : `${item.inactiveIconClass} group-hover:scale-110`
+                        : `${item.inactiveIconClass} group-hover:scale-105`
                     }`}>
-                      <Icon className={`w-5 h-5 transition-transform duration-300 ${isActive ? 'scale-110' : ''}`} />
+                      <Icon className={`w-4.5 h-4.5 transition-transform duration-200 ${isActive ? 'scale-105' : ''}`} />
                     </div>
 
                     <span className={`tracking-wide transition-colors flex-1 ${
                       isHeader
-                        ? 'text-base font-black uppercase tracking-wider'
+                        ? 'text-sm font-black uppercase tracking-wider'
                         : isSubItem
                         ? 'text-xs font-bold'
-                        : 'text-sm font-extrabold'
+                        : 'text-xs font-extrabold'
                     }`}>
                       {label}
                     </span>
 
                     {isActive && (
-                      <span className="w-2 h-2 rounded-full bg-slate-950/80 mr-1 animate-pulse" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-950/80 mr-0.5 animate-pulse" />
                     )}
                   </motion.button>
                 );
               })}
 
-              <div className="pt-6 mt-4 flex flex-row items-center justify-center px-2">
-                {/* Minimalist Taxi Button - Sleek Card */}
-                <motion.button
-                  whileHover={{ scale: 1.04, y: -2 }}
-                  whileTap={{ scale: 0.96 }}
+              <div className="pt-6 mt-2 flex flex-row items-center gap-6 px-4">
+                {/* Minimalist Taxi Button - Large Icon, Aligned Left */}
+                <button
                   onClick={() => window.confirm("Taxi 1525?") && (window.location.href = 'tel:1525')}
-                  className="w-full flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-amber-50 to-yellow-100/90 border border-amber-300/70 shadow-md shadow-amber-500/10 hover:shadow-lg hover:shadow-amber-500/20 transition-all group"
+                  className="flex flex-col items-center group active:scale-95 transition-transform"
                 >
-                  <div className="flex items-center gap-3">
-                    <img
-                      src="/assets/Gallery/QuestQRLocations/Taxi1525.webp"
-                      alt="Taxi 1525"
-                      className="w-12 h-12 object-contain transition-transform group-hover:scale-105 drop-shadow-sm"
-                    />
-                    <div className="text-left">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-amber-900/70 block">
-                        Quick Call
-                      </span>
-                      <span className="text-sm font-black text-amber-950">
-                        Taxi 1525
-                      </span>
-                    </div>
-                  </div>
-                  <span className="text-xs font-black px-2.5 py-1 rounded-xl bg-amber-400 text-slate-950 group-hover:bg-amber-500 transition-colors shadow-sm">
-                    Call 📞
-                  </span>
-                </motion.button>
+                  <img
+                    src="/assets/Gallery/QuestQRLocations/Taxi1525.webp"
+                    alt="Taxi 1525"
+                    className="w-24 h-24 object-contain mb-1 transition-transform group-hover:scale-105"
+                  />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-blue-900/60 group-hover:text-blue-600">Taxi 1525</span>
+                </button>
               </div>
             </div>
 
             {/* Footer */}
-            <div className="p-3 border-t border-slate-100 text-center bg-white/40">
-              <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">
-                Tuzla Tourism & Discovery
+            <div className="p-3 border-t border-slate-100 flex items-center justify-center gap-1.5 text-center bg-white/40">
+              <Heart className="w-4 h-4 text-rose-500 fill-rose-500" />
+              <span className="text-xs font-black tracking-wider text-slate-700">
+                Tuzla
               </span>
             </div>
           </motion.aside>
