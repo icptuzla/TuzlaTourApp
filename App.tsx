@@ -5,6 +5,8 @@ import { Capacitor } from '@capacitor/core';
 import { Menu } from 'lucide-react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
+const queryClient = new QueryClient();
+import { Analytics } from "@vercel/analytics/react"
 import Sidebar from './components/Sidebar';
 import LandingPage from './components/LandingPage';
 import SecurityGuard from './components/SecurityGuard';
@@ -13,25 +15,21 @@ import FullScreenImageViewer from './components/FullScreenImageViewer';
 import ErrorBoundary from './components/ErrorBoundary';
 import ReloadPrompt from './components/ReloadPrompt';
 import OfflineIndicator from './components/OfflineIndicator';
-
+import MapQuestView from "./components/MapQuestView";
 import { AppTab } from './types';
 import { ImageProvider } from './hooks/ImageContext';
 import { GlobalAppProvider, useGlobalApp } from './contexts/GlobalAppContext';
 import { useDraggablePopups } from './hooks/useDraggablePopups';
+import { SpeedInsights } from "@vercel/speed-insights/react"
+import ARGuide from './components/ARGuide';
 
 const MapView = React.lazy(() => import('./components/MapView'));
-const MapQuestView = React.lazy(() => import('./components/MapQuestView'));
 const History = React.lazy(() => import('./components/History'));
 const CityGuide = React.lazy(() => import('./components/CityGuide'));
 const WalletShell = React.lazy(() => import('./components/Wallet'));
 const TaskManager = React.lazy(() => import('./components/TaskManager'));
 const Food = React.lazy(() => import('./components/Food'));
 const Accommodation = React.lazy(() => import('./components/Accommodation'));
-const ARGuide = React.lazy(() => import('./components/ARGuide'));
-const Parking = React.lazy(() => import('./components/Parking'));
-
-const queryClient = new QueryClient();
-
 const getTabFromPath = (path: string): AppTab => {
   switch (path) {
     case '/': return AppTab.LANDING;
@@ -44,7 +42,6 @@ const getTabFromPath = (path: string): AppTab => {
     case '/food': return AppTab.FOOD;
     case '/accommodation': return AppTab.ACCOMMODATION;
     case '/ar': return AppTab.AR;
-    case '/parking': return AppTab.PARKING;
     default: return AppTab.LANDING;
   }
 };
@@ -61,7 +58,6 @@ const getPathFromTab = (tab: AppTab): string => {
     case AppTab.FOOD: return '/food';
     case AppTab.ACCOMMODATION: return '/accommodation';
     case AppTab.AR: return '/ar';
-    case AppTab.PARKING: return '/parking';
     default: return '/';
   }
 };
@@ -193,7 +189,6 @@ const AppContent: React.FC = () => {
                       features={features}
                       unlockedRewards={unlockedRewards}
                       onRewardFound={(id) => setUnlockedRewards((prev) => (prev.includes(id) ? prev : [...prev, id]))}
-                      onToggleAR={() => navigateToTab(AppTab.AR)}
                       navigationTarget={navigationTarget}
                       onClearNavigation={() => setNavigationTarget(null)}
                       initialOpenScanner={autoOpenScanner}
@@ -211,13 +206,15 @@ const AppContent: React.FC = () => {
                     <ARGuide
                       lang={lang}
                       features={features}
+                      unlockedRewards={unlockedRewards}
+                      onRewardFound={(id) => setUnlockedRewards((prev) => (prev.includes(id) ? prev : [...prev, id]))}
+                      initialTarget={navigationTarget}
                       onNavigate={(poi) => {
                         setNavigationTarget(poi);
                         navigateToTab(AppTab.MAP);
                       }}
                     />
                   } />
-                  <Route path="/parking" element={<Parking lang={lang} />} />
                 </Routes>
               </Suspense>
             </ErrorBoundary>

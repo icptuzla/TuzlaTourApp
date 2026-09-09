@@ -1,20 +1,20 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Language } from '../types';
 import { TRANSLATIONS } from '../constants';
-import { 
-    Wallet as WalletIcon, 
-    Lock, 
-    CheckCircle2, 
-    Globe, 
-    X, 
-    Copy, 
-    ExternalLink, 
-    Zap, 
-    QrCode, 
-    Award, 
-    ArrowLeftRight, 
-    BookOpen, 
-    Play, 
+import {
+    Wallet as WalletIcon,
+    Lock,
+    CheckCircle2,
+    Globe,
+    X,
+    Copy,
+    ExternalLink,
+    Zap,
+    QrCode,
+    Award,
+    ArrowLeftRight,
+    BookOpen,
+    Play,
     Trash2,
     AlertCircle,
     Stethoscope
@@ -29,7 +29,8 @@ import { WalletModalProvider, WalletMultiButton } from '@solana/wallet-adapter-r
 import { SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
 import { clusterApiUrl, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { useGlobalApp } from '../contexts/GlobalAppContext';
-import { QUEST_TARGETS } from './MapQuestView';
+import { QUEST_TARGETS } from '../constants/questData';
+import { findQuestTargetFromQr } from '../utils/qrMatcher';
 import { Preferences } from '@capacitor/preferences';
 
 import '@solana/wallet-adapter-react-ui/styles.css';
@@ -63,7 +64,7 @@ const WalletContent: React.FC<{
     const scannerRef = useRef<Html5Qrcode | null>(null);
     const isOnline = useNetwork();
     const t = TRANSLATIONS[lang];
-    
+
     const { unlockedRewards, setUnlockedRewards } = useGlobalApp();
 
     const convertedValue = bamValue
@@ -73,7 +74,7 @@ const WalletContent: React.FC<{
         : '0.00';
 
     // Solana hooks
-    const { publicKey, connected: solConnected } = useWallet();
+    const { publicKey, connected: solConnected, disconnect } = useWallet();
     const { connection } = useConnection();
 
     // Load Scan History Ledger on init
@@ -122,31 +123,6 @@ const WalletContent: React.FC<{
 
     const shortAddress = (addr: string) => `${addr.slice(0, 4)}...${addr.slice(-4)}`;
 
-    // QR Code matching helpers
-    const normalizeQrText = (value: string) => value
-        .normalize('NFD')
-        .replace(/[ - ]/g, '')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]/gi, '')
-        .toLowerCase();
-
-    const findQuestTargetFromQr = (decodedText: string) => {
-        const normalized = normalizeQrText(decodedText);
-        return QUEST_TARGETS.find(target => {
-            const candidates = [
-                target.id,
-                target.name?.en,
-                target.name?.bs,
-            ].filter(Boolean).map(normalizeQrText);
-
-            return candidates.some(candidate =>
-                candidate === normalized ||
-                candidate.includes(normalized) ||
-                normalized.includes(candidate)
-            );
-        });
-    };
-
     const startScanner = async () => {
         setIsScanning(true);
         setScannerFeedback(null);
@@ -162,7 +138,7 @@ const WalletContent: React.FC<{
                     async (decodedText) => {
                         const trimmed = decodedText?.trim() ?? '';
                         const target = findQuestTargetFromQr(trimmed);
-                        
+
                         if (!target) {
                             setScannerFeedback({
                                 text: lang === 'bs'
@@ -188,7 +164,7 @@ const WalletContent: React.FC<{
                         // Check if already in ledger
                         const exists = ledger.some(item => item.id === target.id);
                         let newLedger = [...ledger];
-                        
+
                         if (exists) {
                             setScannerFeedback({
                                 text: lang === 'bs'
@@ -270,7 +246,7 @@ const WalletContent: React.FC<{
                     <div className="mb-8 flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-2xl animate-pulse">
                         <span className="text-amber-500">📡</span>
                         <p className="text-xs font-bold text-amber-700 uppercase tracking-wide">
-                            {lang === 'bs' ? 'Blockchain zahtijeva internet vezu' : 'Blockchain requires internet'}
+                            {t.blockchainOffline}
                         </p>
                     </div>
                 )}
@@ -278,7 +254,7 @@ const WalletContent: React.FC<{
                 <div className="text-center mb-12">
                     <h1 className="text-4xl font-black text-blue-950 uppercase tracking-tight flex items-center justify-center gap-3">
                         <WalletIcon className="w-10 h-10 text-blue-600" />
-                        {lang === 'bs' ? 'Digitalni' : 'Digital'} <span className="text-blue-600">{lang === 'bs' ? 'Novčanik' : 'Wallet'}</span>
+                        {t.digitalWalletTitle}
                     </h1>
                     <div className="h-1 w-24 bg-blue-600 mx-auto rounded-full mt-2" />
                 </div>
@@ -286,221 +262,186 @@ const WalletContent: React.FC<{
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                     {/* ── Left Column: Solana + Scanner + Converter (7 cols on lg) ── */}
                     <div className="lg:col-span-7 space-y-6">
-                        
-                        {/* Solana Card (Solflare Integration Only) */}
-                        <div className="p-4 sm:p-6 bg-white border border-purple-100 rounded-[2rem] shadow-xl space-y-4 overflow-hidden relative">
+
+                        {/* Solana Card (Solflare Integration) */}
+                        <div className="p-5 sm:p-6 bg-white border border-purple-100 rounded-[2rem] shadow-xl relative overflow-hidden flex flex-col gap-5">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 rounded-full blur-2xl pointer-events-none" />
                             
-                            {/* Network Switcher & Header */}
-                            <div className="flex justify-between items-center flex-wrap gap-3 pb-4 border-b border-purple-100">
+                            {/* Header */}
+                            <div className="flex justify-between items-start gap-4">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                                        <Zap size={18} className="text-white" />
+                                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-slate-50 border border-slate-100 shadow-inner shrink-0">
+                                        <img src="/assets/Gallery/QuestQRLocations/sologo.png" alt="Solflare" className="w-7 h-7 object-contain" />
                                     </div>
                                     <div>
                                         <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest">Solflare Wallet</p>
-                                        <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">Solana Connection</h3>
+                                        <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">Solana Blockchain</h3>
                                     </div>
                                 </div>
-                                
-                                {/* Network Switcher */}
-                                <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
-                                    <button
-                                        onClick={() => setNetwork('devnet')}
-                                        className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${network === 'devnet' ? 'bg-purple-600 text-white shadow' : 'text-slate-400 hover:text-slate-700'}`}
-                                    >
-                                        Devnet
-                                    </button>
-                                    <button
-                                        onClick={() => setNetwork('mainnet-beta')}
-                                        className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${network === 'mainnet-beta' ? 'bg-purple-600 text-white shadow' : 'text-slate-400 hover:text-slate-700'}`}
-                                    >
-                                        Mainnet
-                                    </button>
-                                </div>
+                                {/* Clean Network Switcher */}
+                                <button
+                                    onClick={() => setNetwork(network === 'devnet' ? 'mainnet-beta' : 'devnet')}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition-all active:scale-95 shrink-0"
+                                    title={`Switch network. Current: ${network}`}
+                                >
+                                    <div className={`w-2 h-2 rounded-full ${network === 'mainnet-beta' ? 'bg-emerald-500' : 'bg-purple-500'}`} />
+                                    <span className="text-[10px] font-black text-slate-600 uppercase tracking-wider">
+                                        {network === 'devnet' ? 'DEVNET' : 'MAINNET'}
+                                    </span>
+                                    <ArrowLeftRight size={10} className="text-slate-400 ml-1" />
+                                </button>
                             </div>
 
-                            {/* Wallet Info & Connect Button */}
-                            <div className="flex justify-between items-center flex-wrap gap-4 pt-2">
-                                <div>
-                                    {solConnected && publicKey ? (
-                                        <div>
-                                            <p className="text-xs text-slate-400 font-bold uppercase">{lang === 'bs' ? 'Adresa Novčanika' : 'Wallet Address'}</p>
-                                            <p className="text-base font-black text-purple-950 font-mono mt-0.5">{shortAddress(publicKey.toBase58())}</p>
+                            {/* Wallet Info */}
+                            <div className="flex-1 bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                                {solConnected && publicKey ? (
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between items-center">
+                                            <p className="text-xs text-slate-400 font-bold uppercase">{t.walletAddress}</p>
+                                            <button onClick={handleCopyAddress} className="text-purple-600 hover:text-purple-700 p-1" title="Copy Address">
+                                                {copySuccess ? <CheckCircle2 size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                                            </button>
                                         </div>
-                                    ) : (
-                                        <div>
-                                            <p className="text-xs text-slate-400 font-bold uppercase">{lang === 'bs' ? 'Status' : 'Status'}</p>
-                                            <p className="text-base font-black text-slate-400 mt-0.5">{lang === 'bs' ? 'Nije spojeno' : 'Not connected'}</p>
+                                        <p className="text-lg font-black text-purple-950 font-mono tracking-tight">{shortAddress(publicKey.toBase58())}</p>
+                                        <div className="pt-3 border-t border-slate-200 flex justify-between items-end">
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase">{t.solBalance}</p>
+                                            <p className="text-xl font-black text-purple-700 leading-none">
+                                                {solBalance !== null ? `◎ ${solBalance.toFixed(4)}` : '—'}
+                                            </p>
                                         </div>
-                                    )}
-                                </div>
-                                <div className="max-w-[170px] overflow-hidden">
-                                    <WalletMultiButton
-                                        style={{
-                                            background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
-                                            borderRadius: '1rem',
-                                            fontSize: '11px',
-                                            fontWeight: 900,
-                                            height: '38px',
-                                            padding: '0 16px',
-                                            maxWidth: '100%',
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            whiteSpace: 'nowrap',
-                                            boxShadow: '0 4px 14px rgba(124, 58, 237, 0.3)'
-                                        }}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* SOL Balance + Address actions */}
-                            <AnimatePresence>
-                                {solConnected && publicKey && (
-                                    <motion.div
-                                        initial={{ opacity: 0, height: 0 }}
-                                        animate={{ opacity: 1, height: 'auto' }}
-                                        exit={{ opacity: 0, height: 0 }}
-                                        className="pt-4 border-t border-purple-100 space-y-4"
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase">SOL Balance</p>
-                                                <p className="text-2xl font-black text-purple-700 mt-0.5">
-                                                    {solBalance !== null ? `◎ ${solBalance.toFixed(4)}` : '—'}
-                                                </p>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={handleCopyAddress}
-                                                    className="p-2.5 bg-purple-50 border border-purple-100 rounded-xl hover:bg-purple-100 transition-all active:scale-90"
-                                                    title="Copy address"
-                                                >
-                                                    {copySuccess
-                                                        ? <CheckCircle2 size={16} className="text-green-600" />
-                                                        : <Copy size={16} className="text-purple-600" />
-                                                    }
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* Solana Explorer Button */}
-                                        <button
-                                            onClick={() => window.open(`https://explorer.solana.com/address/${publicKey.toBase58()}?cluster=${network === 'devnet' ? 'devnet' : ''}`, '_blank')}
-                                            className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow hover:shadow-lg active:scale-95 transition-all"
-                                        >
-                                            <ExternalLink size={14} />
-                                            {lang === 'bs' ? 'Pregledaj na Solana Exploreru' : 'View on Solana Explorer'}
-                                        </button>
-                                        
-                                        <p className="text-[9px] text-slate-400 font-mono break-all text-center">
-                                            {publicKey.toBase58()}
-                                        </p>
-                                    </motion.div>
+                                    </div>
+                                ) : (
+                                    <div className="h-full flex flex-col justify-center">
+                                        <p className="text-xs text-slate-400 font-bold uppercase mb-1">Status</p>
+                                        <p className="text-sm font-black text-slate-800 uppercase">{t.statusNotConnected}</p>
+                                    </div>
                                 )}
-                            </AnimatePresence>
+                            </div>
+
+                            {/* Standardized Action Button */}
+                            <div className="h-14 w-full">
+                                {solConnected && publicKey ? (
+                                    <button
+                                        onClick={() => {
+                                            if (disconnect) disconnect();
+                                        }}
+                                        className="w-full h-full bg-slate-800 hover:bg-slate-900 text-white text-xs font-black uppercase tracking-widest rounded-xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                    >
+                                        DISCONNECT
+                                    </button>
+                                ) : (
+                                    <div className="w-full h-full [&>.wallet-adapter-button]:w-full [&>.wallet-adapter-button]:h-full [&>.wallet-adapter-button]:justify-center [&>.wallet-adapter-button]:bg-gradient-to-r [&>.wallet-adapter-button]:from-purple-600 [&>.wallet-adapter-button]:to-indigo-600 [&>.wallet-adapter-button]:rounded-xl [&>.wallet-adapter-button]:text-xs [&>.wallet-adapter-button]:font-black [&>.wallet-adapter-button]:uppercase [&>.wallet-adapter-button]:tracking-widest [&>.wallet-adapter-button]:shadow-lg hover:[&>.wallet-adapter-button]:scale-[0.98] [&>.wallet-adapter-button]:transition-all">
+                                        <WalletMultiButton />
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         {/* QR Scanner Trigger Card */}
-                        <div className="p-4 sm:p-6 bg-white border border-blue-100 rounded-[2rem] shadow-xl space-y-4 overflow-hidden relative">
+                        <div className="p-5 sm:p-6 bg-white border border-blue-100 rounded-[2rem] shadow-xl relative overflow-hidden flex flex-col gap-5">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl pointer-events-none" />
-                            <div className="flex justify-between items-center">
+                            
+                            {/* Header */}
+                            <div className="flex justify-between items-start gap-4">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                                        <QrCode size={18} className="text-white" />
+                                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-slate-50 border border-slate-100 shadow-inner shrink-0">
+                                        <QrCode size={24} className="text-blue-600" />
                                     </div>
                                     <div>
-                                        <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">{lang === 'bs' ? 'Istraživanje' : 'Exploration'}</p>
-                                        <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">{lang === 'bs' ? 'QR Skeniranje Lokacija' : 'QR Location Scanner'}</h3>
+                                        <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">{t.explorationTitle}</p>
+                                        <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">{t.qrLocationScannerTitle}</h3>
                                     </div>
                                 </div>
-                                <button
-                                    onClick={startScanner}
-                                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-lg shadow-blue-500/20 flex items-center gap-2 active:scale-95 transition-all"
-                                >
-                                    <QrCode size={14} />
-                                    {lang === 'bs' ? 'Pokreni' : 'Scan QR'}
-                                </button>
                             </div>
-                            <p className="text-xs text-slate-500 leading-relaxed">
-                                {lang === 'bs'
-                                    ? 'Pronađite i skenirajte QR kodove na istorijskim znamenitostima širom Tuzle kako biste otključali nagrade u svom vodiču i upisali ih u knjigu.'
-                                    : 'Find and scan QR codes at historical locations around Tuzla to unlock guide rewards and record them in your scan ledger.'}
-                            </p>
+
+                            {/* Content */}
+                            <div className="flex-1 bg-slate-50 rounded-2xl p-4 border border-slate-100 flex items-center">
+                                <p className="text-xs text-slate-500 leading-relaxed">
+                                    {t.qrScannerDesc}
+                                </p>
+                            </div>
+
+                            {/* Standardized Action Button */}
+                            <button
+                                onClick={startScanner}
+                                className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-widest rounded-xl shadow-lg shadow-blue-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                            >
+                                <QrCode size={16} />
+                                {t.startScanner}
+                            </button>
                         </div>
 
                         {/* Currency Converter */}
-                        <div className="p-4 sm:p-6 bg-white border border-blue-100 rounded-[2rem] shadow-xl space-y-4 overflow-hidden">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <ArrowLeftRight size={16} className="text-blue-600" />
-                                    <h3 className="text-xs font-black text-blue-400 uppercase tracking-widest">{lang === 'bs' ? 'Konvertor Valuta' : 'Currency Converter'}</h3>
+                        <div className="p-5 sm:p-6 bg-white border border-emerald-100 rounded-[2rem] shadow-xl relative overflow-hidden flex flex-col gap-5">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
+                            
+                            {/* Header */}
+                            <div className="flex justify-between items-start gap-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-slate-50 border border-slate-100 shadow-inner shrink-0">
+                                        <ArrowLeftRight size={24} className="text-emerald-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Exchange</p>
+                                        <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">{t.currencyConverterTitle}</h3>
+                                    </div>
                                 </div>
                                 <button
                                     onClick={() => {
                                         setConversionMode(m => m === 'BAM_TO_EUR' ? 'EUR_TO_BAM' : 'BAM_TO_EUR');
                                         setBamValue('');
                                     }}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-blue-700 active:scale-95 transition-all shadow"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition-all active:scale-95 shrink-0"
+                                    title="Swap currency"
                                 >
-                                    <ArrowLeftRight size={12} />
-                                    {conversionMode === 'BAM_TO_EUR' ? 'BAM → EUR' : 'EUR → BAM'}
+                                    <span className="text-[10px] font-black text-slate-600 uppercase tracking-wider">
+                                        {conversionMode === 'BAM_TO_EUR' ? 'BAM → EUR' : 'EUR → BAM'}
+                                    </span>
+                                    <ArrowLeftRight size={10} className="text-slate-400 ml-1" />
                                 </button>
                             </div>
-                            <div className="space-y-3">
+
+                            {/* Content */}
+                            <div className="flex-1 bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-3">
                                 <div>
-                                    <label className="text-[10px] font-bold text-blue-300 uppercase block mb-1">
-                                        {conversionMode === 'BAM_TO_EUR' ? (lang === 'bs' ? 'Unesite Konvertibilne Marke (KM)' : 'Enter BAM (KM)') : 'Enter EUR (€)'}
+                                    <label className="text-[10px] font-bold text-emerald-600 uppercase block mb-1">
+                                        {conversionMode === 'BAM_TO_EUR' ? t.enterBamLabel : t.enterEurLabel}
                                     </label>
                                     <input
                                         type="number"
                                         value={bamValue}
                                         onChange={(e) => setBamValue(e.target.value)}
                                         placeholder="0.00"
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 text-slate-800 font-black focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-800 font-black focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
                                     />
                                 </div>
-                                <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100/50">
-                                    <p className="text-[10px] font-bold text-blue-400 uppercase mb-1">
-                                        {conversionMode === 'BAM_TO_EUR' ? 'Estimated EUR' : 'Estimated BAM'}
-                                    </p>
-                                    <p className="text-3xl font-black text-blue-600">
+                                <div className="pt-3 border-t border-slate-200 flex justify-between items-end">
+                                    <div>
+                                        <p className="text-[10px] font-bold text-emerald-600 uppercase mb-0.5">
+                                            {conversionMode === 'BAM_TO_EUR' ? t.estimatedEurLabel : t.estimatedBamLabel}
+                                        </p>
+                                        <p className="text-[9px] text-slate-400">{t.conversionRateText}</p>
+                                    </div>
+                                    <p className="text-xl font-black text-emerald-700 leading-none">
                                         {conversionMode === 'BAM_TO_EUR' ? `€ ${convertedValue}` : `KM ${convertedValue}`}
-                                    </p>
-                                    <p className="text-[10px] text-blue-300 mt-1">
-                                        Rate: 1 EUR = 1.95583 BAM
                                     </p>
                                 </div>
                             </div>
-                        </div>
-
-                        {/* Privacy Disclaimer */}
-                        <div className="px-2 text-[11px] text-slate-500 font-light italic leading-relaxed space-y-3 pb-4">
-                            <p>
-                                This application functions as a non-custodial, self-sovereign interface. We provide the tools for you to interact with information and blockchain services, but you maintain absolute ownership and control of your digital assets and identity.
-                            </p>
-                            <p className="font-medium text-slate-600 not-italic">Key Privacy &amp; Data Security Points</p>
-                            <ul className="list-disc pl-4 space-y-2">
-                                <li><span className="font-medium not-italic text-slate-600">Zero Custody of Assets:</span> We do not hold your private keys, seed phrases, or digital assets. You have sole, exclusive control over your wallet. We cannot access, recover, or move your funds.</li>
-                                <li><span className="font-medium not-italic text-slate-600">Privacy-by-Design:</span> In compliance with the new Law on Personal Data Protection of Bosnia and Herzegovina (Official Gazette of BiH, No. 12/25, aligned with GDPR), this app is built to collect zero personal identifying information (PII).</li>
-                                <li><span className="font-medium not-italic text-slate-600">No Data Storage:</span> We do not store your personal history, location logs, or behavioral data on our servers. Any interaction—including AI queries or image analysis for landmark identification—is processed anonymously.</li>
-                                <li><span className="font-medium not-italic text-slate-600">On-Device Processing:</span> Wherever possible, data processing is handled locally on your own device to ensure your information never leaves your possession.</li>
-                            </ul>
                         </div>
                     </div>
 
                     {/* ── Right Column: Scan History Ledger + Partner Links (5 cols on lg) ── */}
                     <div className="lg:col-span-5 space-y-6">
-                        
+
                         {/* Scan History Ledger */}
                         <div className="p-4 sm:p-6 bg-white border border-emerald-100 rounded-[2rem] shadow-xl space-y-4 flex flex-col relative min-h-[380px]">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
-                            
+
                             <div className="flex justify-between items-center pb-3 border-b border-slate-100 shrink-0">
                                 <div className="flex items-center gap-2">
                                     <BookOpen className="w-5 h-5 text-emerald-600" />
                                     <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">
-                                        {lang === 'bs' ? 'Knjiga Skeniranja' : 'Scan History Ledger'}
+                                        {t.scanHistoryLedgerTitle}
                                     </h3>
                                 </div>
                                 <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
@@ -517,12 +458,10 @@ const WalletContent: React.FC<{
                                         </div>
                                         <div>
                                             <p className="text-xs font-black text-slate-700 uppercase">
-                                                {lang === 'bs' ? 'Knjiga je prazna' : 'Ledger is empty'}
+                                                {t.ledgerEmptyTitle}
                                             </p>
                                             <p className="text-[11px] text-slate-400 mt-1 max-w-[200px] mx-auto leading-relaxed">
-                                                {lang === 'bs' 
-                                                    ? 'Skenirajte lokacije širom grada za popunjavanje istorije.' 
-                                                    : 'Scan location QR codes around the city to build your history.'}
+                                                {t.ledgerEmptyDesc}
                                             </p>
                                         </div>
                                     </div>
@@ -530,33 +469,34 @@ const WalletContent: React.FC<{
                                     ledger.map((entry) => {
                                         const target = QUEST_TARGETS.find(q => q.id === entry.id);
                                         if (!target) return null;
+                                        const targetName = target.name[lang] || target.name.en || target.name.bs;
                                         return (
-                                            <div 
-                                                key={entry.id} 
+                                            <div
+                                                key={entry.id}
                                                 className="p-3 bg-slate-50 hover:bg-slate-100/80 border border-slate-100 rounded-2xl flex items-center gap-3 transition-colors group relative"
                                             >
                                                 <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0 border border-slate-200">
-                                                    <img 
-                                                        src={target.Image} 
-                                                        alt={target.name[lang] || target.name.en} 
+                                                    <img
+                                                        src={target.Image}
+                                                        alt={targetName}
                                                         className="w-full h-full object-cover"
                                                     />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <h4 className="text-xs font-black text-slate-800 uppercase tracking-tight truncate">
-                                                        {lang === 'bs' ? target.name.bs : target.name.en}
+                                                        {targetName}
                                                     </h4>
                                                     <span className="text-[9px] text-slate-400 font-bold block mt-0.5">
                                                         {entry.timestamp}
                                                     </span>
                                                 </div>
-                                                
+
                                                 {/* Play Reward Video Button */}
                                                 {(target as any).video && (
                                                     <button
                                                         onClick={() => setPlayingVideo((target as any).video)}
                                                         className="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-xl transition-all shrink-0 active:scale-90"
-                                                        title={lang === 'bs' ? 'Pogledaj cinematic' : 'Watch cinematic'}
+                                                        title={t.watchCinematic}
                                                     >
                                                         <Play size={14} className="fill-emerald-600" />
                                                     </button>
@@ -574,28 +514,28 @@ const WalletContent: React.FC<{
                                         <div className="flex items-center gap-2 bg-red-50 p-2 border border-red-100 rounded-2xl">
                                             <AlertCircle size={16} className="text-red-500 shrink-0" />
                                             <span className="text-[10px] font-bold text-red-700 uppercase flex-grow">
-                                                {lang === 'bs' ? 'Jeste li sigurni?' : 'Are you sure?'}
+                                                {t.clearHistoryConfirm}
                                             </span>
-                                            <button 
+                                            <button
                                                 onClick={handleClearLedger}
                                                 className="px-2.5 py-1 bg-red-600 text-white rounded-lg text-[9px] font-black uppercase tracking-wider"
                                             >
-                                                {lang === 'bs' ? 'Da, obriši' : 'Yes, delete'}
+                                                {t.yesDelete}
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={() => setShowClearConfirm(false)}
                                                 className="px-2.5 py-1 bg-slate-200 text-slate-700 rounded-lg text-[9px] font-black uppercase tracking-wider"
                                             >
-                                                {lang === 'bs' ? 'Otkaz' : 'Cancel'}
+                                                {t.cancel}
                                             </button>
                                         </div>
                                     ) : (
-                                        <button 
+                                        <button
                                             onClick={() => setShowClearConfirm(true)}
                                             className="w-full py-2.5 bg-slate-50 border border-slate-100 hover:bg-red-50 hover:text-red-600 hover:border-red-100 text-slate-400 font-black text-[10px] uppercase tracking-wider rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all"
                                         >
                                             <Trash2 size={12} />
-                                            {lang === 'bs' ? 'Očisti Knjigu Skeniranja' : 'Clear Scan History'}
+                                            {t.clearScanHistory}
                                         </button>
                                     )}
                                 </div>
@@ -606,7 +546,7 @@ const WalletContent: React.FC<{
                         <div className="p-4 sm:p-8 bg-white border border-emerald-100 rounded-[2rem] shadow-xl space-y-6 overflow-hidden">
                             <h2 className="text-xl font-black text-emerald-950 uppercase tracking-tight flex items-center gap-2">
                                 <Globe size={20} className="text-emerald-600" />
-                                Partner Agencies
+                                {t.partnerAgenciesTitle}
                             </h2>
                             <div className="space-y-4">
                                 <button
@@ -614,23 +554,39 @@ const WalletContent: React.FC<{
                                     className="w-full h-16 bg-white text-blue-600 border-2 border-blue-500 font-black rounded-2xl flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all text-sm tracking-widest uppercase hover:bg-slate-50"
                                 >
                                     <Stethoscope size={18} />
-                                    DENTAL TOURISM
+                                    {t.dentalTourism}
                                 </button>
                                 <button
-                                    onClick={() => window.open('https://aiso-tuzla-ai.lovable.app/', '_blank')}
+                                    onClick={() => window.open('https://aiso-tuzla.lovable.app/', '_blank')}
                                     className="w-full h-16 bg-blue-600 text-yellow-300 font-black rounded-2xl flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all text-sm tracking-widest uppercase hover:bg-blue-700"
                                 >
                                     AISO TUZLA
                                 </button>
-                                <button
-                                    onClick={() => window.open('https://bosnia-collection.vercel.app/', '_blank')}
-                                    className="w-full h-16 bg-amber-500 text-blue-900 font-black rounded-2xl flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all text-sm tracking-widest uppercase hover:bg-amber-600"
-                                >
-                                    BOSNIA AND HERZEGOVINA DIGITAL ALBUM
-                                </button>
                             </div>
                         </div>
                     </div>
+                </div>
+
+                {/* Privacy Disclaimer (Placed at the bottom of the Wallet page) */}
+                <div className="mt-12 p-6 sm:p-8 bg-white border border-slate-200/80 rounded-[2rem] shadow-sm text-xs text-slate-500 leading-relaxed space-y-4">
+                    <p className="font-light italic text-slate-500 leading-relaxed">
+                        {t.privacyDisclaimerText}
+                    </p>
+                    <p className="font-bold text-slate-700 uppercase tracking-tight text-xs">{t.privacyKeyPointsTitle}</p>
+                    <ul className="list-disc pl-5 space-y-2.5">
+                        <li>
+                            <span className="font-bold text-slate-700">{t.zeroCustodyTitle}</span> {t.zeroCustodyText}
+                        </li>
+                        <li>
+                            <span className="font-bold text-slate-700">{t.privacyByDesignTitle}</span> {t.privacyByDesignText}
+                        </li>
+                        <li>
+                            <span className="font-bold text-slate-700">{t.noDataStorageTitle}</span> {t.noDataStorageText}
+                        </li>
+                        <li>
+                            <span className="font-bold text-slate-700">{t.onDeviceProcessingTitle}</span> {t.onDeviceProcessingText}
+                        </li>
+                    </ul>
                 </div>
             </div>
 
@@ -641,26 +597,48 @@ const WalletContent: React.FC<{
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[7000] bg-black flex flex-col p-6"
+                        className="fixed inset-0 z-[7000] bg-slate-950/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 sm:p-6"
                     >
-                        <div className="flex-grow flex items-center justify-center bg-black">
-                            <video
-                                src={playingVideo}
-                                autoPlay
-                                controls
-                                playsInline
-                                className="w-full max-h-[70vh] rounded-[2.5rem] bg-black shadow-[0_50px_100px_-20px_rgba(0,0,0,0.8)] border border-white/10"
-                            />
-                        </div>
+                        <div className="w-full max-w-2xl bg-black border border-white/15 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col">
+                            <div className="p-4 sm:p-5 flex items-center justify-between border-b border-white/10 bg-white/5">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-xl bg-amber-400/20 text-amber-400 flex items-center justify-center border border-amber-400/30">
+                                        <Play className="w-4 h-4 fill-amber-400" />
+                                    </div>
+                                    <h3 className="text-base font-black text-white uppercase tracking-tight">
+                                        {t.watchCinematic}
+                                    </h3>
+                                </div>
+                                <button
+                                    onClick={() => setPlayingVideo(null)}
+                                    className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
 
-                        <div className="h-48 flex flex-col items-center justify-center gap-6">
-                            <h2 className="text-white font-black text-2xl uppercase tracking-tighter text-center">Cinematic Playback</h2>
-                            <button
-                                onClick={() => setPlayingVideo(null)}
-                                className="px-12 py-5 bg-white text-slate-950 rounded-2xl font-black uppercase text-xs tracking-widest hover:scale-105 active:scale-95 transition-all"
-                            >
-                                Close Video
-                            </button>
+                            <div className="relative w-full aspect-video sm:max-h-[60vh] bg-black flex items-center justify-center">
+                                <video
+                                    src={playingVideo}
+                                    autoPlay
+                                    controls
+                                    playsInline
+                                    preload="auto"
+                                    className="w-full h-full object-contain"
+                                />
+                            </div>
+
+                            <div className="p-4 border-t border-white/10 bg-white/5 flex items-center justify-between">
+                                <span className="text-xs font-bold text-slate-400">
+                                    {t.watchCinematic}
+                                </span>
+                                <button
+                                    onClick={() => setPlayingVideo(null)}
+                                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 font-black text-xs uppercase tracking-wider hover:scale-105 active:scale-95 transition-all"
+                                >
+                                    {t.closeVideo}
+                                </button>
+                            </div>
                         </div>
                     </motion.div>
                 )}
@@ -675,10 +653,10 @@ const WalletContent: React.FC<{
                             <div className="w-full flex justify-between items-center mb-6">
                                 <div>
                                     <h3 className="text-lg font-black text-white uppercase tracking-wider">
-                                        {lang === 'bs' ? 'Skeniraj QR Kod' : 'Scan QR Code'}
+                                        {t.qrLocationScannerTitle}
                                     </h3>
                                     <p className="text-xs text-slate-400 font-medium mt-0.5">
-                                        {lang === 'bs' ? 'Skenirajte kod lokacije za otključavanje' : 'Scan location QR code to unlock'}
+                                        {t.scanLocationToUnlock}
                                     </p>
                                 </div>
                                 <button
@@ -688,11 +666,11 @@ const WalletContent: React.FC<{
                                     <X size={20} />
                                 </button>
                             </div>
-                            
+
                             {/* Camera Viewport */}
                             <div className="relative w-full aspect-square bg-black rounded-3xl overflow-hidden border-2 border-purple-500/30">
                                 <div id="wallet-reader" className="w-full h-full"></div>
-                                
+
                                 {/* Overlay Scanning Guide */}
                                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
                                     <div className="w-48 h-48 border-2 border-dashed border-purple-500/40 rounded-2xl relative">
@@ -701,16 +679,16 @@ const WalletContent: React.FC<{
                                         <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-purple-400 translate-x-1 -translate-y-1 rounded-tr-md"></div>
                                         <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-purple-400 -translate-x-1 translate-y-1 rounded-bl-md"></div>
                                         <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-purple-400 translate-x-1 translate-y-1 rounded-br-md"></div>
-                                        
+
                                         {/* Laser line animation */}
                                         <div className="absolute left-0 right-0 h-1 bg-purple-400/80 animate-scanner-laser top-[10%]"></div>
                                     </div>
                                 </div>
                             </div>
-                            
+
                             {/* Hint */}
                             <p className="text-[10px] text-purple-400 font-bold uppercase tracking-widest mt-6 animate-pulse">
-                                {lang === 'bs' ? 'Pozicionirajte kod unutar okvira' : 'Position code within the frame'}
+                                {t.positionCodeInFrame}
                             </p>
                         </div>
                     </div>
@@ -759,7 +737,7 @@ const WalletContent: React.FC<{
 // Main Export Component wrapping contents in Solana Providers
 const Wallet: React.FC<WalletProps> = ({ lang }) => {
     const [network, setNetwork] = useState<'mainnet-beta' | 'devnet'>('devnet');
-    
+
     const endpoint = useMemo(() => {
         if (network === 'mainnet-beta') {
             return 'https://api.mainnet-beta.solana.com';

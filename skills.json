@@ -1,15 +1,69 @@
 {
   "skills": [
     {
+      "source": "caoliao/qrcode-skills",
+      "skills": [
+        "qrcode-skills"
+      ]
+    },
+    {
+      "source": "cartodb/agent-skills",
+      "skills": [
+        "carto-develop-app"
+      ]
+    },
+    {
+      "source": "coreyhaines31/marketingskills",
+      "skills": [
+        "ai-seo"
+      ]
+    },
+    {
+      "source": "curiositech/some_claude_skills",
+      "skills": [
+        "photo-content-recognition-curation-expert"
+      ]
+    },
+    {
+      "source": "endo-ly/harmonic-orbit",
+      "skills": [
+        "ui-ux-design-patterns"
+      ]
+    },
+    {
+      "source": "fixmyberlin/fixmyskills",
+      "skills": [
+        "react-map-gl"
+      ]
+    },
+    {
       "source": "obra/superpowers",
       "skills": [
         "brainstorming"
       ]
     },
     {
+      "source": "ohall/thesituation",
+      "skills": [
+        "maplibre-react"
+      ]
+    },
+    {
+      "source": "omer-metin/skills-for-antigravity",
+      "skills": [
+        "vr-ar-development"
+      ]
+    },
+    {
       "source": "supabase/agent-skills",
       "skills": [
         "supabase-postgres-best-practices"
+      ]
+    },
+    {
+      "source": "travisjneuman/.claude",
+      "skills": [
+        "ar-vr-xr"
       ]
     },
     {

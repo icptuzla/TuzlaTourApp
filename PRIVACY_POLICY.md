@@ -8,16 +8,16 @@ Welcome to the **Tuzla Tour App** ("we", "our", or "the App"). We are committed 
 This Privacy Policy explains how we collect, use, and handle your data and is designed to comply with the **Law on Personal Data Protection of Bosnia and Herzegovina (Zakon o zaštiti ličnih podataka BiH)**, as well as the overarching principles of the General Data Protection Regulation (GDPR).
 
 ## 2. Who is the Data Controller?
-[Insert Company/Developer Name or "Tuzla Tourism Board"]  
-[Insert Address/Location, e.g., Tuzla, Bosnia and Herzegovina]  
-Contact Email: [Insert Email Address]
+We (AISO tuzla) do not have control over your personal data.
+Hosting providers are Vercel and Netlify.
+Your location data, camera access, and web3 wallet data are processed locally on your device and are not stored on our servers or any third-party servers.
 
 ## 3. Data We Collect and How We Use It
 We strongly believe in **data minimization** and **privacy by design**. Our App is built to process as much information locally on your device as possible, without sending personal data to external servers.
 
 ### A. Location Data
 - **Purpose:** To calculate the distance to Points of Interest (POIs), help you navigate the city, and trigger AR features when you are within a 10-meter radius of a landmark.
-- **Processing:** Location data is processed **locally on your device**. We do not track your location in the background, nor do we store your movement history or share it with any third parties or remote servers.
+- **Processing:** Location data is processed **locally on your device**. We do not record your location in the background.
 - **Legal Basis:** Your explicit consent (granted when you allow the App location permissions).
 
 ### B. Camera Access
@@ -37,10 +37,10 @@ We strongly believe in **data minimization** and **privacy by design**. Our App 
 ## 4. Do We Share Your Data?
 No. Because we process your location, camera feed, and app progress locally on your own device, **we do not sell, rent, or share any of your personal data with third parties.** We do not use third-party tracking or profiling systems that collect your data. 
 
-*Note: For linked third-party services (like the mapping service, OAuth providers, or Wallet apps like Tonkeeper/MyTonWallet), please refer to their respective Privacy Policies as they act as independent controllers.*
+*Note: For linked third-party services (like the mapping service, OAuth providers, or Wallet apps like Solflare, Phantom etc.), please refer to their respective Privacy Policies as they act as independent controllers.*
 
 ## 5. Data Retention
-Because the Tuzla Tour App relies entirely on local device processing, we do not store your data on our central servers. Your preferences and progression (e.g., unlocked rewards) remain on your device until you choose to uninstall the App or clear the App's data from your device settings.
+Because the Tuzla Tour App relies entirely on local device processing, we do not store your data on our central servers. Your preferences and progression (e.g., unlocked rewards) remain on your device 
 
 ## 6. Your Rights Under BiH Personal Data Protection Law
 Under the Law on Personal Data Protection of BiH (and aligned GDPR standards), you have the following rights regarding your personal data:

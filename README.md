@@ -1,8 +1,7 @@
 # Tuzla Tour App - Comprehensive Digital Guide 🇧🇦
 
-Welcome to the **Tuzla Tour App**, a premium Progressive Web Application (PWA) designed to provide an immersive, gamified, and highly interactive experience for tourists and locals in Tuzla, Bosnia and Herzegovina.
+Welcome to the "Tuzla Tour" App is a premium Progressive Web Application (PWA) designed to provide an immersive, gamified, and highly interactive experience for tourists and locals in Tuzla, Bosnia and Herzegovina.
 
----
 
 ## 🚀 Technology Stack
 
@@ -40,13 +39,6 @@ Turn sightseeing into a real-life treasure hunt!
 The Tuzla Tour App is deeply integrated with local businesses to boost the local economy and tourism:
 - **AISO Tuzla**: Proudly partnered with AISO Tuzla, a premier AI Agent Optimizer Agency, ensuring the application stays at the forefront of digital innovation.
 - **Dental Tourism**: Collaborating with top-tier local dental clinics to promote Tuzla as a prime destination for high-quality, affordable dental tourism.
-- **Travel Agencies**: Integrated with leading travel agencies to offer complete tourist packages, accommodation options, and guided experiences.
-
-### 4. World Cup 2026 Module
-A special dedicated tab for football fans:
-- **National Team Roster**: Full squad list of Bosnia and Herzegovina.
-- **Player Stats**: Detailed ratings (OVR, PAC, SHO, PAS, DRI, DEF, PSY).
-- **Match Predictions**: Interactive module for predicting tournament outcomes.
 
 ### 5. Multi-Language Support
 Full localization for:
@@ -55,26 +47,14 @@ Full localization for:
 - 🇩🇪 German
 - 🇹🇷 Turkish
 
----
-
 ## 🛠️ How to Extend & Customize
 
 ### Adding New Points of Interest (POI)
-To add a new location to the map:
-1. Open `constants.tsx`.
-2. Find the `LOCATIONS_RAW` array.
-3. Add a new object with `id`, `name`, `coordinates`, and `category`.
 
 ### Adding a New Quest Reward
-To add a new QR-locked reward:
-1. Define the target in `MapQuestView.tsx` under `QUEST_TARGETS`.
-2. Assign an `id` that matches the value encoded in the physical QR code.
-3. Attach an `image` or `video` to be revealed upon scanning.
 
 ### Adding Shops & Businesses
-Businesses can be added to the `LOCATIONS_RAW` in `constants.tsx` using the `shopping` or `food` categories. These will appear with unique icons and can be linked to the Quest system for "Unlockable Discounts."
 
----
 
 ## 📱 Deployment
 
@@ -88,16 +68,11 @@ Using Capacitor, the app can be converted to a native binary:
 ```bash
 npm run build
 npx cap sync android
-# Open in Android Studio
-npx cap open android
-```
 
----
----
 
-# Tuzla Tour App - Sveobuhvatni Digitalni Vodič 🇧🇦
+# Tuzla Tour Guide - Turistički Digitalni Vodič 🇧🇦
 
-Dobrodošli u **Tuzla Tour App**, vrhunsku Progresivnu Web Aplikaciju (PWA) dizajniranu da pruži imerzivno, gejmifikovano i visoko interaktivno iskustvo za turiste i stanovnike Tuzle.
+Dobrodošli u **Tuzla Tour Guide**, vrhunsku Progresivnu Web Aplikaciju (PWA) dizajniranu da pruži gejmifikovano i visoko interaktivno iskustvo za turiste i stanovnike Tuzle.
 
 ## 🚀 Tehnološki Stack
 
@@ -148,12 +123,7 @@ Kompletna lokalizacija na:
 - 🇩🇪 Njemački
 - 🇹🇷 Turski
 
-### 6. Parking SMS
-  Mapa sa parking zonama i lokalnim parkinzima.
-  Zona 0 - Zona 1 - Zona 2 na 1h i 24h.
-  Jednostavna uplata unosom tablica vozila, odabir zone i uplata.
-
-### 7. Ponuda
+### 6. Ponuda
   Restorani, hoteli, apartmani i stan na dan.
 
 ---
@@ -181,5 +151,7 @@ Aplikacija je optimizovana za Vercel. Hero video se učitava kao primarni resurs
 ```bash
 npm run build
 npx cap sync android
-```
-Aplikacija se potom može otvoriti i kompajlirati u Android Studiju.
+---
+
+
+MADE BY AISO TUZLA for City of Tuzla

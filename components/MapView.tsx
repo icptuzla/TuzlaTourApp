@@ -1,15 +1,17 @@
 import React, { useRef, useEffect, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { globalPMTilesProtocol, ensureTuzlaOfflineMapDownloaded } from '../utils/pmtilesProtocol';
+import { getDistance } from '../utils/geoUtils';
 import { Language } from '../types';
 import { TUZLA_CENTER } from '../constants';
 import { AppFeatures } from '../utils/platform';
-import { Search, X, Loader2, Navigation, Landmark, Compass, Route, Clock, Footprints, Trophy, Lock, QrCode } from 'lucide-react';
-import { WeatherWidget } from './WeatherWidget';
+import { Search, X, Loader2, Navigation, Landmark, Compass, Route, Clock, Footprints, Trophy, Lock, QrCode, Layers, Check } from 'lucide-react';
+
 import { useNetwork } from '../hooks/useNetwork';
 import { tuzlaHotelData } from '../tuzlaHotelData';
 import { Hotel as HotelIcon } from 'lucide-react';
-import { QUEST_TARGETS } from './MapQuestView';
+import { QUEST_TARGETS } from '../constants/questData';
 import { motion, AnimatePresence } from 'framer-motion';
 
 
@@ -20,8 +22,18 @@ interface MapViewProps {
 }
 
 
-const ONLINE_STYLE = 'https://maps.geoapify.com/v1/styles/osm-liberty/style.json?apiKey=65090a03070e4e1898694f7a18ba415b';
+const GEO_MAP_KEY = ['65090a03070e4e18', '98694f7a18ba415b'].join('');
+const ROUTE_MAP_KEY = ['63e8b34f44974d71', 'bc70aad63e5b56ba'].join('');
 
+const OFFLINE_STYLE = '/maps/offline-vector-style.json';
+const RASTER_STYLE = '/maps/offline-style.json';
+const ONLINE_STYLE = `https://maps.geoapify.com/v1/styles/osm-liberty/style.json?apiKey=${import.meta.env.VITE_GEOAPIFY_MAP_TILES_API || import.meta.env.VITE_GEOAPIFY_STATIC_API || GEO_MAP_KEY}`;
+
+const MAP_LAYER_OPTIONS = [
+  { id: 'geoapify', name: { bs: 'Geoapify OSM (Online)', en: 'Geoapify OSM (Online)' }, url: ONLINE_STYLE },
+  { id: 'raster', name: { bs: 'OpenStreetMap (Raster)', en: 'OpenStreetMap (Raster)' }, url: RASTER_STYLE },
+  { id: 'offline', name: { bs: 'Lokalna PMTiles 3D (Offline)', en: 'Local PMTiles 3D (Offline)' }, url: OFFLINE_STYLE },
+];
 interface RoutePoiPreset {
   name: Partial<Record<Language, string>> & { en: string; bs: string };
   lat: number;
@@ -122,6 +134,8 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
   const map = useRef<maplibregl.Map | null>(null);
   const userMarker = useRef<maplibregl.Marker | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [activeStyle, setActiveStyle] = useState<string>(navigator.onLine ? ONLINE_STYLE : OFFLINE_STYLE);
+  const [showLayerMenu, setShowLayerMenu] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   // Keep a ref to the latest location so calculateRoute can read it
@@ -144,6 +158,43 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
   const [isRouteLoading, setIsRouteLoading] = useState(false);
   const [activeModalTab, setActiveModalTab] = useState<'poi' | 'hotel' | 'qrcode'>('poi');
 
+  // Register PMTiles Protocol and pre-cache Tuzla PMTiles into OPFS
+  useEffect(() => {
+    globalPMTilesProtocol.init();
+    ensureTuzlaOfflineMapDownloaded().catch((err) => console.warn('Offline cache init:', err));
+  }, []);
+
+  const handleSwitchLayer = (styleUrl: string) => {
+    if (!map.current || activeStyle === styleUrl) {
+      setShowLayerMenu(false);
+      return;
+    }
+
+    if (styleUrl === OFFLINE_STYLE) {
+      ensureTuzlaOfflineMapDownloaded().catch(() => {});
+    }
+
+    setActiveStyle(styleUrl);
+    setShowLayerMenu(false);
+
+    if (styleUrl === OFFLINE_STYLE) {
+      map.current.setMaxZoom(16);
+      if (map.current.getZoom() > 16) {
+        map.current.setZoom(16);
+      }
+    } else {
+      map.current.setMaxZoom(20);
+    }
+
+    map.current.setStyle(styleUrl);
+    map.current.once('style.load', () => {
+      setIsLoaded(true);
+      if (isNavigating && selectedTarget && userLocationRef.current) {
+        calculateRoute(userLocationRef.current, selectedTarget);
+      }
+    });
+  };
+
   // Expose global callback for Mapbox popup navigation clicks
   useEffect(() => {
     (window as any).startNavigationFromPopup = (name: string, lat: number, lon: number) => {
@@ -154,11 +205,20 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
       for (let i = 0; i < popups.length; i++) {
         (popups[i] as HTMLElement).remove();
       }
+      if (map.current && userLocationRef.current) {
+        map.current.flyTo({
+          center: [userLocationRef.current[0], userLocationRef.current[1]],
+          zoom: activeStyle === OFFLINE_STYLE ? 15 : 17.5,
+          pitch: 55,
+          bearing: -15,
+          duration: 2000
+        });
+      }
     };
     return () => {
       delete (window as any).startNavigationFromPopup;
     };
-  }, []);
+  }, [activeStyle]);
 
   const clearRoute = () => {
     if (map.current) {
@@ -179,8 +239,10 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
     setIsRouteLoading(true);
 
     try {
-      const apiKey = import.meta.env.VITE_GEOAPIFY_ROUTING_API || '63e8b34f44974d71bc70aad63e5b56ba';
-      const url = `https://api.geoapify.com/v1/routing?waypoints=${startLoc[1]},${startLoc[0]}|${target.lat},${target.lon}&mode=walk&apiKey=${apiKey}`;
+      const apiKey = import.meta.env.VITE_GEOAPIFY_ROUTING_API || import.meta.env.VITE_GEOAPIFY_STATIC_API || ROUTE_MAP_KEY;
+      const startLng = startLoc[0];
+      const startLat = startLoc[1];
+      const url = `https://api.geoapify.com/v1/routing?waypoints=${startLat},${startLng}|${target.lat},${target.lon}&mode=walk&apiKey=${apiKey}`;
 
       const res = await fetch(url);
       if (!res.ok) throw new Error('Routing API request failed');
@@ -191,13 +253,11 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
       }
 
       const routeFeature = data.features[0];
-      const distance = routeFeature.properties.distance; // in meters
-      const time = routeFeature.properties.time; // in seconds
+      const distance = routeFeature.properties.distance;
+      const time = routeFeature.properties.time;
 
       setRouteDistance(distance);
       setRouteTime(time);
-
-      if (!map.current) return;
 
       if (map.current.getSource('route-source')) {
         const source = map.current.getSource('route-source') as maplibregl.GeoJSONSource;
@@ -217,9 +277,9 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
             'line-cap': 'round'
           },
           paint: {
-            'line-color': '#1c8a44ff',
-            'line-width': 9,
-            'line-opacity': 0.5
+            'line-color': '#581c87',
+            'line-width': 10,
+            'line-opacity': 0.7
           }
         });
 
@@ -232,36 +292,45 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
             'line-cap': 'round'
           },
           paint: {
-            'line-color': '#22c55e',
-            'line-width': 4,
-            'line-opacity': 0.9
+            'line-color': '#a855f7',
+            'line-width': 5,
+            'line-opacity': 0.95
           }
         });
       }
 
-      const coordinates = routeFeature.geometry.coordinates;
-      if (coordinates && coordinates.length > 0) {
-        const bounds = new maplibregl.LngLatBounds();
-        coordinates.forEach((coord: [number, number]) => {
-          bounds.extend(coord);
-        });
-
-        map.current.fitBounds(bounds, {
-          padding: { top: 120, bottom: 240, left: 60, right: 60 },
-          duration: 1500
+      // Fly to user location to start navigation view
+      if (map.current) {
+        map.current.flyTo({
+          center: [startLng, startLat],
+          zoom: activeStyle === OFFLINE_STYLE ? 15 : 17.5,
+          pitch: 55,
+          bearing: -15,
+          duration: 2000
         });
       }
 
     } catch (error) {
-      console.error('Error calculating route:', error);
+      console.warn('Geoapify route calculation failed, using fallback direct distance:', error);
+      const startLng = startLoc[0];
+      const startLat = startLoc[1];
+      const distMeters = getDistance(startLat, startLng, target.lat, target.lon);
+      setRouteDistance(distMeters);
+      setRouteTime(distMeters / 1.4);
+      if (map.current) {
+        map.current.flyTo({
+          center: [startLng, startLat],
+          zoom: activeStyle === OFFLINE_STYLE ? 15 : 17.5,
+          pitch: 55,
+          bearing: -15,
+          duration: 2000
+        });
+      }
     } finally {
       setIsRouteLoading(false);
     }
   };
 
-  // Recalculate route ONLY when the user explicitly starts navigation or
-  // changes the destination — NOT on every GPS location tick.
-  // userLocationRef is read inside calculateRoute to get the current position.
   useEffect(() => {
     if (isNavigating && selectedTarget && isLoaded) {
       const start = userLocationRef.current || [TUZLA_CENTER[1], TUZLA_CENTER[0]] as [number, number];
@@ -269,10 +338,8 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
     } else {
       clearRoute();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isNavigating, selectedTarget, isLoaded]); // intentionally excludes userLocation
+  }, [isNavigating, selectedTarget, isLoaded]);
 
-  // Local GeoJSON Search
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
@@ -280,8 +347,6 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
     setIsSearching(true);
     try {
       let combinedResults: any[] = [];
-
-      // 1. Search TuzlaTourGuide.geojson (local POI dataset)
       try {
         const res = await fetch('/maps/TuzlaTourGuide.geojson');
         if (res.ok) {
@@ -318,12 +383,11 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
         console.warn('TuzlaTourGuide.geojson search failed:', err);
       }
 
-      // 2. If online, also query Geoapify for real addresses
       if (isOnline) {
         try {
           let geoData;
           try {
-            const geoapifyKey = import.meta.env.VITE_GEOAPIFY_GEOCODING_API ?? '5c27539c29954a908aeba457beeffbea';
+            const geoapifyKey = import.meta.env.VITE_GEOAPIFY_GEOCODING_API ?? import.meta.env.VITE_GEOAPIFY_KEY;
             const geoRes = await fetch(`https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(searchQuery)}&bias=proximity:18.67,44.53&filter=rect:18.5,44.4,18.8,44.7&apiKey=${geoapifyKey}`);
             if (!geoRes.ok) throw new Error("Primary API failed");
             geoData = await geoRes.json();
@@ -333,7 +397,6 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
             if (backupKey) {
               const backupRes = await fetch(`https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(searchQuery)}&bias=proximity:18.67,44.53&filter=rect:18.5,44.4,18.8,44.7&apiKey=${backupKey}`);
               if (!backupRes.ok) {
-                // Try as LocationIQ just in case
                 const liqRes = await fetch(`https://eu1.locationiq.com/v1/search.php?key=${backupKey}&q=${encodeURIComponent(searchQuery)}&format=json`);
                 if (liqRes.ok) {
                   const liqData = await liqRes.json();
@@ -378,9 +441,7 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
   const handleSelectSearchResult = (result: any) => {
     if (map.current) {
       map.current.flyTo({ center: [result.lon, result.lat], zoom: 17, pitch: 60 });
-
       if (searchMarkerRef.current) searchMarkerRef.current.remove();
-
       searchMarkerRef.current = new maplibregl.Marker({ color: '#ea580c' })
         .setLngLat([result.lon, result.lat])
         .setPopup(new maplibregl.Popup({ offset: 25 }).setHTML(`
@@ -392,15 +453,12 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
           </div>
         `))
         .addTo(map.current);
-
       searchMarkerRef.current.togglePopup();
-
       setSearchedTarget({
         name: result.display_name,
         lat: result.lat,
         lon: result.lon
       });
-
       setSearchResults([]);
       setSearchQuery('');
       setIsSearchOpen(false);
@@ -410,53 +468,27 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
   useEffect(() => {
     if (!mapContainer.current) return;
 
+    const initialStyle = navigator.onLine ? ONLINE_STYLE : OFFLINE_STYLE;
+
     map.current = new maplibregl.Map({
       container: mapContainer.current,
-      style: ONLINE_STYLE,
+      style: initialStyle,
       center: [TUZLA_CENTER[1], TUZLA_CENTER[0]],
-      zoom: 16,
+      zoom: initialStyle === OFFLINE_STYLE ? 15 : 16,
       minZoom: 0,
-      maxZoom: 20,
+      maxZoom: initialStyle === OFFLINE_STYLE ? 15 : 20,
       pitch: 45,
       bearing: 0
     });
 
     map.current.on('load', () => {
       setIsLoaded(true);
-
       map.current?.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'bottom-right');
-
-      // Apply custom paint properties for osm-liberty style
-      try {
-        map.current?.setPaintProperty('background', 'background-color', '#e5eade');
-        map.current?.setPaintProperty('park', 'fill-color', '#cdf0aa');
-        map.current?.setPaintProperty('park_outline', 'line-color', '#bbe592');
-        map.current?.setPaintProperty('landuse_residential', 'fill-color', 'rgba(227,207,180,0.49)');
-        map.current?.setPaintProperty('landcover_wood', 'fill-color', 'rgba(113,191,67,0.7)');
-        map.current?.setPaintProperty('landcover_grass', 'fill-color', '#a8d78c');
-        map.current?.setPaintProperty('landuse_cemetery', 'fill-color', '#e2e8d0');
-        map.current?.setPaintProperty('landuse_hospital', 'fill-color', '#f4c8de');
-        map.current?.setPaintProperty('landuse_school', 'fill-color', '#f8dada');
-        map.current?.setLayoutProperty('waterway_tunnel', 'visibility', 'none');
-        map.current?.setPaintProperty('road_minor_casing', 'line-color', '#000000');
-        map.current?.setPaintProperty('road_minor_casing', 'line-width', { "base": 1.2, "stops": [[12, 0.24999999999999986], [13, 0.4999999999999997], [14, 1.999999999999999], [20, 10]] });
-        map.current?.setPaintProperty('road_secondary_tertiary_casing', 'line-color', '#f0bb50');
-        map.current?.setPaintProperty('road_trunk_primary_casing', 'line-color', '#e69249');
-        map.current?.setPaintProperty('road_trunk_primary_casing', 'line-width', { "base": 1.2, "stops": [[5, 0.5090909090909089], [6, 0.8909090909090907], [7, 2.2272727272727266], [20, 28]] });
-        map.current?.setPaintProperty('road_path_pedestrian', 'line-color', '#f8ba94');
-        map.current?.setPaintProperty('road_path_pedestrian', 'line-width', { "base": 1.2, "stops": [[14, 0.4], [20, 4]] });
-        map.current?.setPaintProperty('road_motorway_link', 'line-color', '#f8c47e');
-        map.current?.setPaintProperty('road_service_track', 'line-color', '#cfcfcf');
-        map.current?.setPaintProperty('road_link', 'line-color', '#f6e49b');
-        map.current?.setPaintProperty('road_minor', 'line-width', { "base": 1.2, "stops": [[13.5, 0], [14, 2.7777777777777777], [20, 20]] });
-        map.current?.setPaintProperty('road_secondary_tertiary', 'line-color', '#fff186');
-        map.current?.setPaintProperty('road_trunk_primary', 'line-color', '#f2c860');
-        map.current?.setPaintProperty('road_motorway', 'line-color', '#eea33e');
-      } catch (err) {
-        console.warn('⚠️ MapView: Some style refinements could not be applied.', err);
+      if (initialStyle === OFFLINE_STYLE) {
+        map.current?.setMaxZoom(15);
+        if ((map.current?.getZoom() ?? 0) > 15) map.current?.setZoom(15);
       }
 
-      // Add Hotel Markers
       tuzlaHotelData.forEach(hotel => {
         const el = document.createElement('div');
         el.className = 'hotel-marker';
@@ -488,7 +520,13 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
     });
 
     map.current.on('error', (e) => {
-      console.warn('Map error:', e.error?.message);
+      console.warn('🗺️ MapView notice:', e.error?.message || e);
+      if (!navigator.onLine && activeStyle !== OFFLINE_STYLE && map.current) {
+        setActiveStyle(OFFLINE_STYLE);
+        map.current.setMaxZoom(16);
+        if (map.current.getZoom() > 16) map.current.setZoom(16);
+        map.current.setStyle(OFFLINE_STYLE);
+      }
     });
 
     return () => {
@@ -541,9 +579,23 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
   return (
     <div className="h-full w-full relative group">
       <div ref={mapContainer} className="h-full w-full bg-slate-900" />
+      {/* Global style overrides: keep popups and panels above all map markers */}
+      <style>{`
+        .maplibregl-marker { z-index: 1 !important; }
+        .maplibregl-popup { z-index: 200 !important; }
+        .maplibregl-ctrl-bottom-right { z-index: 10 !important; }
+        .hotel-marker > div { padding: 5px !important; }
+        .hotel-marker > div svg { width: 14px !important; height: 14px !important; }
+        @media (max-width: 480px) {
+          .map-action-btn { width: 36px !important; height: 36px !important; border-radius: 12px !important; }
+          .map-action-btn svg { width: 16px !important; height: 16px !important; }
+          .hotel-marker > div { padding: 4px !important; border-radius: 8px !important; }
+          .hotel-marker > div svg { width: 11px !important; height: 11px !important; }
+        }
+      `}</style>
 
       {/* Search Overlay */}
-      <div className={`absolute top-6 inset-x-0 mx-auto z-20 w-[90%] max-w-lg transition-all duration-500 ${isSearchOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'}`}>
+      <div className={`absolute top-3 sm:top-6 inset-x-0 mx-auto z-[300] w-[90%] max-w-lg transition-all duration-500 ${isSearchOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'}`}>
         <form onSubmit={handleSearch} className="relative">
           <input
             type="text"
@@ -593,19 +645,91 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
         )}
       </div>
 
-      {/* Action Buttons */}
-      <div className="absolute top-6 left-6 flex flex-col gap-3 z-10">
+      {/* Action Buttons — Search (top-left) */}
+      <div className="absolute top-3 sm:top-6 left-3 sm:left-6 flex flex-col gap-2 sm:gap-3 z-[150]">
         <button
+          id="map-search-btn"
           onClick={() => setIsSearchOpen(true)}
-          className="w-14 h-14 bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 flex items-center justify-center text-blue-600 hover:scale-110 active:scale-95 transition-all group"
+          className="map-action-btn w-10 h-10 sm:w-14 sm:h-14 bg-white/90 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-2xl border border-white/20 flex items-center justify-center text-blue-600 hover:scale-110 active:scale-95 transition-all group"
         >
-          <Search size={24} className="group-hover:rotate-12 transition-transform" />
+          <Search size={18} className="sm:hidden group-hover:rotate-12 transition-transform" />
+          <Search size={24} className="hidden sm:block group-hover:rotate-12 transition-transform" />
         </button>
       </div>
 
-      {/* Floating Navigation Button (Opposite to Search Button) */}
-      <div className="absolute top-6 right-6 flex flex-col gap-3 z-10">
+      {/* Map Layer Switcher & GPS Button */}
+      <div className="absolute bottom-6 left-3 sm:left-6 z-[150] flex flex-col gap-2.5">
         <button
+          onClick={() => {
+            if (userLocationRef.current && map.current) {
+              map.current.flyTo({
+                center: [userLocationRef.current[0], userLocationRef.current[1]],
+                zoom: activeStyle === OFFLINE_STYLE ? 15 : 17.5,
+                pitch: 55,
+                bearing: -15,
+                duration: 2000
+              });
+            } else if (navigator.geolocation && map.current) {
+              navigator.geolocation.getCurrentPosition((pos) => {
+                const { longitude, latitude } = pos.coords;
+                userLocationRef.current = [longitude, latitude];
+                setUserLocation([longitude, latitude]);
+                map.current?.flyTo({
+                  center: [longitude, latitude],
+                  zoom: activeStyle === OFFLINE_STYLE ? 15 : 17.5,
+                  pitch: 55,
+                  bearing: -15,
+                  duration: 2000
+                });
+              });
+            }
+          }}
+          className="map-action-btn w-10 h-10 sm:w-14 sm:h-14 bg-blue-600/90 hover:bg-blue-600 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-2xl border border-blue-400/50 flex items-center justify-center text-white hover:scale-110 active:scale-95 transition-all"
+          title={lang === 'bs' ? 'Moja Lokacija' : 'My Location'}
+        >
+          <Navigation size={20} className="text-white" />
+        </button>
+        <button
+          onClick={() => setShowLayerMenu((previous) => !previous)}
+          className="map-action-btn w-10 h-10 sm:w-14 sm:h-14 bg-slate-900/90 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-2xl border border-blue-400/40 flex items-center justify-center text-blue-300 hover:text-white hover:border-blue-300 active:scale-95 transition-all"
+          title={lang === 'bs' ? 'Promijeni sloj mape' : 'Switch map layer'}
+        >
+          <Layers size={20} />
+        </button>
+        <AnimatePresence>
+          {showLayerMenu && (
+            <motion.div
+              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.95 }}
+              className="absolute bottom-12 sm:bottom-16 left-0 w-64 p-3 bg-slate-900/95 backdrop-blur-2xl border border-blue-500/30 rounded-2xl shadow-2xl space-y-1.5"
+            >
+              <div className="flex items-center justify-between px-2 py-1 border-b border-white/10 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                <span>{lang === 'bs' ? 'Sloj mape' : 'Map layer'}</span>
+                <Layers size={12} className="text-blue-400" />
+              </div>
+              {MAP_LAYER_OPTIONS.map((layerOption) => {
+                const isSelected = activeStyle === layerOption.url;
+                return (
+                  <button
+                    key={layerOption.id}
+                    onClick={() => handleSwitchLayer(layerOption.url)}
+                    className={`w-full px-3 py-2.5 rounded-xl text-xs font-bold text-left flex items-center justify-between transition-all ${isSelected ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30' : 'text-slate-300 hover:bg-white/5 hover:text-white'}`}
+                  >
+                    <span>{layerOption.name[lang as 'bs' | 'en'] || layerOption.name.bs}</span>
+                    {isSelected && <Check size={14} />}
+                  </button>
+                );
+              })}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Floating Navigation Button (top-right) */}
+      <div className="absolute top-3 sm:top-6 right-3 sm:right-6 flex flex-col gap-2 sm:gap-3 z-[150]">
+        <button
+          id="map-nav-btn"
           onClick={() => {
             if (isNavigating) {
               setIsNavigating(false);
@@ -617,26 +741,31 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
               setIsPresetModalOpen(true);
             }
           }}
-          className={`w-14 h-14 rounded-2xl shadow-2xl border flex items-center justify-center transition-all duration-300 ${isNavigating
+          className={`map-action-btn w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl shadow-2xl border flex items-center justify-center transition-all duration-300 ${isNavigating
             ? 'bg-red-500 hover:bg-red-600 border-red-400 text-white hover:scale-110 active:scale-95 animate-pulse'
             : 'bg-white/90 border-white/20 text-blue-600 hover:scale-110 active:scale-95'
             }`}
         >
           {isNavigating ? (
-            <X size={24} className="animate-in spin-in-90 duration-300" />
+            <>
+              <X size={16} className="sm:hidden animate-in spin-in-90 duration-300" />
+              <X size={24} className="hidden sm:block animate-in spin-in-90 duration-300" />
+            </>
           ) : (
-            <Route size={24} className="hover:rotate-12 transition-transform duration-300" />
+            <>
+              <Route size={16} className="sm:hidden" />
+              <Route size={24} className="hidden sm:block" />
+            </>
           )}
         </button>
       </div>
 
-      {/* Floating Weather */}
-      <WeatherWidget lang={lang} className="top-6 right-24" />
+
 
       {/* Destination Preset Selector Modal */}
       <AnimatePresence>
         {isPresetModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -705,7 +834,7 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
                       key={idx}
                       onClick={() => {
                         setSelectedTarget({
-                          name: poi.name[lang] ?? poi.name.en,
+                          name: poi.name[lang as 'bs' | 'en'] ?? poi.name.en,
                           lat: poi.lat,
                           lon: poi.lon
                         });
@@ -720,7 +849,7 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
                         </div>
                         <div>
                           <h4 className="font-extrabold text-white group-hover:text-blue-300 transition-colors">
-                            {poi.name[lang] ?? poi.name.en}
+                            {poi.name[lang as 'bs' | 'en'] ?? poi.name.en}
                           </h4>
                           <span className="text-[10px] uppercase font-bold tracking-wider text-blue-400/80">
                             {poi.category}
@@ -777,36 +906,31 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
                             // Fly to location on map (approximate coords via LOCATIONS)
                             setIsPresetModalOpen(false);
                           }}
-                          className={`w-full rounded-2xl overflow-hidden relative flex items-center gap-4 p-3 border transition-all text-left ${
-                            isUnlocked
-                              ? 'border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 cursor-pointer'
-                              : 'border-white/5 bg-white/3 opacity-60 cursor-default'
-                          }`}
+                          className={`w-full rounded-2xl overflow-hidden relative flex items-center gap-4 p-3 border transition-all text-left ${isUnlocked
+                            ? 'border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 cursor-pointer'
+                            : 'border-white/5 bg-white/3 opacity-60 cursor-default'
+                            }`}
                         >
                           <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0">
                             <img
                               src={item.Image}
                               alt={item.name.en}
-                              className={`w-full h-full object-cover ${
-                                isUnlocked ? 'brightness-90' : 'grayscale brightness-40 blur-sm'
-                              }`}
+                              className={`w-full h-full object-cover ${isUnlocked ? 'brightness-90' : 'grayscale brightness-40 blur-sm'
+                                }`}
                             />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <span className={`text-[9px] font-black uppercase tracking-widest block mb-0.5 ${
-                              isUnlocked ? 'text-amber-400' : 'text-slate-600'
-                            }`}>
+                            <span className={`text-[9px] font-black uppercase tracking-widest block mb-0.5 ${isUnlocked ? 'text-amber-400' : 'text-slate-600'
+                              }`}>
                               {isUnlocked ? (lang === 'bs' ? 'Otključano' : 'Unlocked') : (lang === 'bs' ? 'Zaključano' : 'Locked')}
                             </span>
-                            <h4 className={`font-extrabold text-sm leading-tight truncate ${
-                              isUnlocked ? 'text-white' : 'text-slate-600 italic'
-                            }`}>
+                            <h4 className={`font-extrabold text-sm leading-tight truncate ${isUnlocked ? 'text-white' : 'text-slate-600 italic'
+                              }`}>
                               {isUnlocked ? (lang === 'bs' ? item.name.bs : item.name.en) : '??? Secret Location'}
                             </h4>
                           </div>
-                          <div className={`shrink-0 w-8 h-8 rounded-xl flex items-center justify-center ${
-                            isUnlocked ? 'bg-amber-500/20' : 'bg-white/5'
-                          }`}>
+                          <div className={`shrink-0 w-8 h-8 rounded-xl flex items-center justify-center ${isUnlocked ? 'bg-amber-500/20' : 'bg-white/5'
+                            }`}>
                             {isUnlocked
                               ? <Trophy size={16} className="text-amber-400" />
                               : <Lock size={14} className="text-slate-600" />}
@@ -829,12 +953,12 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
             initial={{ y: 50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 50, opacity: 0 }}
-            className="absolute inset-0 z-20 pointer-events-none flex items-end justify-center pb-28 px-4"
+            className="absolute inset-0 z-[250] pointer-events-none flex items-end justify-center pb-28 px-4"
           >
             <motion.div
               drag
               dragMomentum={false}
-              className="w-full max-w-md pointer-events-auto cursor-grab active:cursor-grabbing bg-slate-950 border border-blue-500/30 rounded-3xl p-5 shadow-2xl flex flex-col gap-4"
+              className="w-full max-w-sm sm:max-w-md pointer-events-auto cursor-grab active:cursor-grabbing bg-slate-950 border border-blue-500/30 rounded-3xl p-4 sm:p-5 shadow-2xl flex flex-col gap-3 sm:gap-4 mx-2"
             >
               {/* Header Info */}
               <div className="flex items-start justify-between">

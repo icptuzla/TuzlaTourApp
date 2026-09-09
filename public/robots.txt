@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://tuzlatourguide.netlify.app/sitemap.xml
+Sitemap: https://tuzlatour.vercel.app/sitemap.xml

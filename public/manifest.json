@@ -1,7 +1,7 @@
 {
-  "name": "Tuzla Virtual Tour Guide",
+  "name": "Tuzla Tour Guide",
   "short_name": "Tuzla Guide",
-  "description": "Digital PWA App Tour Guide for Tuzla with interactive maps, quests, QR scanner, camera and GPS support, Augmented Reality and NFT Rewards.",
+  "description": "Tour Guide application for Tuzla city with interactive maps, gamified quests, QR scanner, GPS support and real-location rewards.",
   "id": "/",
   "start_url": "/",
   "scope": "/",
@@ -17,7 +17,7 @@
   "categories": [
     "travel",
     "navigation",
-    "education"
+    "entertainment"
   ],
   "lang": "bs",
   "dir": "ltr",
@@ -29,8 +29,8 @@
       "purpose": "any maskable"
     },
     {
-      "src": "/assets/resources/TuzlaTourAppLogo350x350.png",
-      "sizes": "350x350",
+      "src": "/assets/resources/TuzlaTourAppLogo512x512.png",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     }

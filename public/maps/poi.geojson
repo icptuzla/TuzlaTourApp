@@ -1,0 +1,211 @@
+{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    18.680213,
+                    44.539067
+                ]
+            },
+            "properties": {
+                "name": "Pannonian Lakes",
+                "name_bs": "Panonska jezera",
+                "category": "nature",
+                "marker-size": "medium",
+                "marker-color": "rgba(60, 149, 239, 1)",
+                "marker-symbol": "beach"
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    18.674774,
+                    44.539492
+                ]
+            },
+            "properties": {
+                "name": "Old Town (Carsija)",
+                "name_bs": "Stari grad (Carsija)",
+                "category": "culture",
+                "marker-size": "medium",
+                "marker-color": "rgba(240, 94, 31, 1)",
+                "marker-symbol": "marker"
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    18.675957,
+                    44.538232
+                ]
+            },
+            "properties": {
+                "name": "Salt Square",
+                "name_bs": "Trg soli",
+                "category": "culture",
+                "marker-color": "rgba(191, 52, 247, 1)",
+                "marker-size": "medium"
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    18.68567,
+                    44.538425
+                ]
+            },
+            "properties": {
+                "name": "Slana Banja",
+                "name_bs": "Slana Banja",
+                "category": "nature",
+                "marker-color": "rgba(235, 201, 34, 1)",
+                "marker-size": "medium"
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    18.665,
+                    44.5381
+                ]
+            },
+            "properties": {
+                "name": "Tuzlanka Mall",
+                "name_bs": "RK Tuzlanka",
+                "category": "shopping"
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    18.651743,
+                    44.532177
+                ]
+            },
+            "properties": {
+                "name": "Bingo City Center",
+                "name_bs": "Bingo City Centar",
+                "category": "shopping",
+                "marker-color": "rgba(15, 193, 12, 1)",
+                "marker-size": "medium",
+                "marker-symbol": "convenience"
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    18.67826,
+                    44.537075
+                ]
+            },
+            "properties": {
+                "name": "Mesa Selimovic",
+                "name_bs": "Meša Selimović",
+                "category": "culture",
+                "marker-color": "rgba(2, 1, 49, 1)",
+                "marker-size": "medium"
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    18.681081,
+                    44.536948
+                ]
+            },
+            "properties": {
+                "name": "Atelje Ismet Mujezinovic",
+                "name_bs": "Atelje Ismet Mujezinović",
+                "category": "culture",
+                "marker-color": "rgba(10, 175, 161, 1)",
+                "marker-size": "medium"
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    18.661546,
+                    44.540812
+                ]
+            },
+            "properties": {
+                "name": "Stadion \"Tusanj\"",
+                "name_bs": "Stadion \"Tušanj\"",
+                "category": "Sport",
+                "marker-color": "rgba(195, 0, 0, 1)",
+                "marker-size": "medium",
+                "marker-symbol": "soccer"
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    18.681752,
+                    44.540654
+                ]
+            },
+            "properties": {
+                "name": "Slapovi",
+                "name_bs": "Slapovi",
+                "category": "nature",
+                "marker-color": "#312E81",
+                "marker-size": "medium"
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "name": "Panckaces House \"Bagi\"",
+                "name_bs": "Palančinkara \"Bagi\"",
+                "category": "dining",
+                "marker-color": "rgba(114, 61, 160, 1)",
+                "marker-size": "medium"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    18.677621,
+                    44.538452
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "name": "King Tvrtko I",
+                "name_bs": "Kralj Tvrtko",
+                "category": "culture",
+                "marker-color": "rgba(242, 242, 255, 1)",
+                "marker-size": "large"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    18.678361,
+                    44.538075
+                ]
+            }
+        }
+    ]
+}

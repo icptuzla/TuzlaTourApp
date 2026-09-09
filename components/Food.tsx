@@ -31,10 +31,6 @@ const AllVenuesSection: React.FC<{ lang: Language }> = ({ lang }) => {
     }
   };
 
-  const typeLabel = (v: LocationData) => {
-    if (v.type === 'Dining') return lang === 'en' ? 'Dining' : lang === 'de' ? 'Restaurant' : 'Restoran';
-    return lang === 'en' ? 'Dessert' : lang === 'de' ? 'Dessert' : 'Desert';
-  };
 
   return (
     <div className="w-full flex flex-col gap-8">
@@ -100,15 +96,6 @@ const AllVenuesSection: React.FC<{ lang: Language }> = ({ lang }) => {
                   <UtensilsCrossed className="w-3.5 h-3.5 shrink-0" />
                   <span className="text-xs font-semibold">{venue.category}</span>
                 </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-3 border-t border-blue-50">
-                <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full bg-green-50 text-green-600 border border-green-100`}>
-                  {typeLabel(venue)}
-                </span>
-                <span className="text-[10px] font-black text-blue-400">
-                  {venue.user_ratings_total} {lang === 'en' ? 'reviews' : lang === 'de' ? 'Bewertungen' : lang === 'tr' ? 'yorum' : 'recenzija'}
-                </span>
               </div>
 
               {/* Website Link */}

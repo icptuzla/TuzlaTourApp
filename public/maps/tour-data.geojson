@@ -1,0 +1,148 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "trg_slobode"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          18.674903,
+          44.539517
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "salt_square"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          18.67664,
+          44.53857
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "palancinkara"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          18.677533,
+          44.538376
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "slana_banja"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          18.687566,
+          44.537816
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "panonika"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          18.68003,
+          44.53888
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "slapovi"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          18.68194,
+          44.540424
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "ismet"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          18.681045,
+          44.537146
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "atelje_ismet"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          18.681045,
+          44.537146
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "bingo_city_centar"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          18.651743,
+          44.532177
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "mesa_selimovic"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          18.678121,
+          44.537099
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "tvrtko_park"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          18.678332,
+          44.538082
+        ]
+      }
+    }
+  ]
+}

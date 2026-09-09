@@ -24,17 +24,17 @@ export interface WifiSpot {
 }
 
 
-export interface ParkingLot {
+export interface RouteStep {
   id: string;
-  name: string;
-  area: string;
-  address: string;
-  coordinates: [number, number];
-  features: string[];
+  text: string;
+  type: string;
+  distance: number;
+  lat: number;
+  lng: number;
+  stepIndex: number;
 }
 
 export interface Location {
-
   id: string;
   name: Record<Language, string>;
   description: Record<Language, string>;
@@ -88,23 +88,9 @@ export interface TranslationSet {
   enterBam: string;
   calculatedEur: string;
   conversionRate: string;
-  parking: string;
   pannonicaAlt: string;
   pannonicaTitle: string;
   pannonicaImage: string;
-  parkingTitle: string;
-  parkingActive: string;
-  parkingAutoDetect: string;
-  parkingLicensePlate: string;
-  parkingHourly: string;
-  parkingDaily: string;
-  parkingPaySms: string;
-  parkingDetectNoZone: string;
-  parkingPromptPlate: string;
-  parkingPaymentInactive: string;
-  parkingConfirm: string;
-  parkingCancel: string;
-  parkingDetected: string;
   trademarksDisclaimer: string;
   privacyNoticeTitle: string;
   privacyNoticeBody: string;
@@ -112,18 +98,63 @@ export interface TranslationSet {
   busStation: string;
   batteryWarning: string;
   selectNetwork: string;
-  tonWallet: string;
+  solWallet: string;
   switchNetwork: string;
-  connectedToTon: string;
+  connectedToSol: string;
   walletLocked: string;
   setWalletPin: string;
   confirmPin: string;
   enterPin: string;
   dentalTourism: string;
-  parkingSearch: string;
   locationNotAvailable: string;
   zonesLabel: string;
   galleryCharmText: string;
+  // Wallet translations
+  digitalWalletTitle: string;
+  solanaConnection: string;
+  walletAddress: string;
+  statusNotConnected: string;
+  viewOnSolanaExplorer: string;
+  explorationTitle: string;
+  qrLocationScannerTitle: string;
+  startScanner: string;
+  qrScannerDesc: string;
+  currencyConverterTitle: string;
+  enterBamLabel: string;
+  enterEurLabel: string;
+  estimatedEurLabel: string;
+  estimatedBamLabel: string;
+  conversionRateText: string;
+  scanHistoryLedgerTitle: string;
+  ledgerEmptyTitle: string;
+  ledgerEmptyDesc: string;
+  clearScanHistory: string;
+  clearHistoryConfirm: string;
+  yesDelete: string;
+  cancel: string;
+  partnerAgenciesTitle: string;
+  scanLocationToUnlock: string;
+  positionCodeInFrame: string;
+  success: string;
+  error: string;
+  alreadyInLedger: string;
+  unlockedLocation: string;
+  unknownQrCode: string;
+  couldNotStartCamera: string;
+  privacyDisclaimerText: string;
+  privacyKeyPointsTitle: string;
+  zeroCustodyTitle: string;
+  zeroCustodyText: string;
+  privacyByDesignTitle: string;
+  privacyByDesignText: string;
+  noDataStorageTitle: string;
+  noDataStorageText: string;
+  onDeviceProcessingTitle: string;
+  onDeviceProcessingText: string;
+  blockchainOffline: string;
+  watchCinematic: string;
+  closeVideo: string;
+  solBalance: string;
 }
 
 export enum AppTab {
@@ -137,6 +168,5 @@ export enum AppTab {
   WALLET = 'wallet',
   TASK_MANAGER = 'taskManager',
   AR = 'ar',
-  PARKING = 'parking',
   TRAVEL_AGENCIES = 'travelAgencies',
 }

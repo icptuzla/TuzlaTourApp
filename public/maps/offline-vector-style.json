@@ -1,0 +1,284 @@
+{
+  "version": 8,
+  "name": "Tuzla Offline Vector Style",
+  "metadata": {
+    "maputnik:renderer": "mlgljs"
+  },
+  "sources": {
+    "tuzla-pmtiles": {
+      "type": "vector",
+      "url": "pmtiles:///maps/tuzla.pmtiles",
+      "minzoom": 0,
+      "maxzoom": 15
+    },
+    "app-pois": {
+      "type": "geojson",
+      "data": "/maps/poi.geojson"
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#f2efe9"
+      }
+    },
+    {
+      "id": "pmtiles-earth",
+      "type": "fill",
+      "source": "tuzla-pmtiles",
+      "source-layer": "earth",
+      "minzoom": 0,
+      "maxzoom": 24,
+      "paint": {
+        "fill-color": "#f2efe9"
+      }
+    },
+    {
+      "id": "pmtiles-landuse-park",
+      "type": "fill",
+      "source": "tuzla-pmtiles",
+      "source-layer": "landuse",
+      "minzoom": 8,
+      "maxzoom": 24,
+      "filter": [
+        "match",
+        ["get", "kind"],
+        ["park", "forest", "grass", "garden", "meadow", "grassland", "recreation_ground", "wood", "pitch", "playground"],
+        true,
+        false
+      ],
+      "paint": {
+        "fill-color": "#cbe8ba",
+        "fill-opacity": 0.7
+      }
+    },
+    {
+      "id": "pmtiles-landuse-pedestrian",
+      "type": "fill",
+      "source": "tuzla-pmtiles",
+      "source-layer": "landuse",
+      "minzoom": 11,
+      "maxzoom": 24,
+      "filter": [
+        "==",
+        ["get", "kind"],
+        "pedestrian"
+      ],
+      "paint": {
+        "fill-color": "#e8e0d4",
+        "fill-opacity": 0.85
+      }
+    },
+    {
+      "id": "pmtiles-landuse-residential",
+      "type": "fill",
+      "source": "tuzla-pmtiles",
+      "source-layer": "landuse",
+      "minzoom": 10,
+      "maxzoom": 24,
+      "filter": [
+        "match",
+        ["get", "kind"],
+        ["residential", "commercial", "university", "school", "hospital"],
+        true,
+        false
+      ],
+      "paint": {
+        "fill-color": "#e4ded6",
+        "fill-opacity": 0.45
+      }
+    },
+    {
+      "id": "pmtiles-landcover",
+      "type": "fill",
+      "source": "tuzla-pmtiles",
+      "source-layer": "landcover",
+      "minzoom": 0,
+      "maxzoom": 8,
+      "paint": {
+        "fill-color": "#d8eed1",
+        "fill-opacity": 0.5
+      }
+    },
+    {
+      "id": "pmtiles-water-areas",
+      "type": "fill",
+      "source": "tuzla-pmtiles",
+      "source-layer": "water",
+      "minzoom": 0,
+      "maxzoom": 24,
+      "filter": [
+        "==",
+        "$type",
+        "Polygon"
+      ],
+      "paint": {
+        "fill-color": "#5babe6",
+        "fill-opacity": 0.85
+      }
+    },
+    {
+      "id": "pmtiles-waterways-casing",
+      "type": "line",
+      "source": "tuzla-pmtiles",
+      "source-layer": "water",
+      "minzoom": 9,
+      "maxzoom": 24,
+      "filter": [
+        "==",
+        "$type",
+        "LineString"
+      ],
+      "paint": {
+        "line-color": "#3b96d4",
+        "line-width": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          9, 1.5,
+          12, 3.0,
+          14, 5.0,
+          16, 7.0
+        ],
+        "line-opacity": 0.6
+      }
+    },
+    {
+      "id": "pmtiles-waterways",
+      "type": "line",
+      "source": "tuzla-pmtiles",
+      "source-layer": "water",
+      "minzoom": 9,
+      "maxzoom": 24,
+      "filter": [
+        "==",
+        "$type",
+        "LineString"
+      ],
+      "paint": {
+        "line-color": "#7ecaf8",
+        "line-width": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          9, 0.8,
+          12, 1.8,
+          14, 3.5,
+          16, 5.0
+        ],
+        "line-opacity": 0.95
+      }
+    },
+    {
+      "id": "pmtiles-roads-casing",
+      "type": "line",
+      "source": "tuzla-pmtiles",
+      "source-layer": "roads",
+      "minzoom": 2,
+      "maxzoom": 24,
+      "paint": {
+        "line-color": "#cec2af",
+        "line-width": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          3, 0.8,
+          10, 2.4,
+          14, 5.0,
+          16, 7.5
+        ],
+        "line-opacity": 0.85
+      }
+    },
+    {
+      "id": "pmtiles-roads",
+      "type": "line",
+      "source": "tuzla-pmtiles",
+      "source-layer": "roads",
+      "minzoom": 2,
+      "maxzoom": 24,
+      "paint": {
+        "line-color": [
+          "match",
+          ["get", "kind"],
+          "highway", "#f5be57",
+          "major_road", "#f7d287",
+          "minor_road", "#ffffff",
+          "pedestrian", "#ede1cf",
+          "service", "#f2eee7",
+          "path", "#d8cdbc",
+          "#ffffff"
+        ],
+        "line-width": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          3, 0.5,
+          10, 1.4,
+          14, 3.4,
+          16, 5.5
+        ]
+      }
+    },
+    {
+      "id": "pmtiles-buildings",
+      "type": "fill-extrusion",
+      "source": "tuzla-pmtiles",
+      "source-layer": "buildings",
+      "minzoom": 12,
+      "maxzoom": 24,
+      "paint": {
+        "fill-extrusion-color": [
+          "interpolate",
+          ["linear"],
+          [
+            "coalesce",
+            ["get", "render_height"],
+            ["get", "height"],
+            12
+          ],
+          0, "#e2e8f0",
+          15, "#cbd5e1",
+          30, "#94a3b8",
+          60, "#64748b"
+        ],
+        "fill-extrusion-height": [
+          "coalesce",
+          ["get", "render_height"],
+          ["get", "height"],
+          12
+        ],
+        "fill-extrusion-base": [
+          "coalesce",
+          ["get", "render_min_height"],
+          ["get", "min_height"],
+          0
+        ],
+        "fill-extrusion-opacity": 0.8,
+        "fill-extrusion-vertical-gradient": true
+      }
+    },
+    {
+      "id": "app-pois-marker",
+      "type": "circle",
+      "source": "app-pois",
+      "minzoom": 11,
+      "maxzoom": 24,
+      "paint": {
+        "circle-radius": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          11, 4,
+          15, 8
+        ],
+        "circle-color": "#2563eb",
+        "circle-stroke-width": 2,
+        "circle-stroke-color": "#ffffff",
+        "circle-opacity": 0.9
+      }
+    }
+  ]
+}

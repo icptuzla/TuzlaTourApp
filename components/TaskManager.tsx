@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Circle, CreditCard, Plus, ShoppingBag, Trash2 } from 'lucide-react';
+import { Calendar as CalendarIcon, CheckCircle2, Circle, CreditCard, Plus, ShoppingBag, Trash2 } from 'lucide-react';
 import { Language } from '../types';
 import { Preferences } from '@capacitor/preferences';
+import { EventCalendarView } from './EventCalendarView';
 
-type Mode = 'expenses' | 'tasks' | 'itinerary' | 'threeDayPlan';
+type Mode = 'calendar' | 'expenses' | 'tasks' | 'itinerary' | 'threeDayPlan';
 
 type ExpenseItem = {
   id: number;
@@ -84,13 +85,10 @@ Dan 3: Priroda, Piknik i Shopping
 • Uživajte u adrenalinskom parku, šumi i hladovini
 • Preporuka za piknik: Ponesite hranu i piće sa sobom i uživajte u prirodi!
 
-🛍️ Shopping i Parking:
-• Otvorite tab "Parking" u aplikaciji
-• Pronađite najpovoljniju parking zonu za BCC (Bingo City Center)
-• Izvršite plaćanje putem SMS-a (odaberite trajanje: sat ili dan)
-• Koristite navigaciju u aplikaciji do tržnog centra Bingo
-• U tržnom centru Bingo koristite kameru za uvid u 3D model lopte
-• Ili skenirajte QR kod na info pultu u prizemlju za osvajanje nagrade!
+🛍️ Shopping i Odmor:
+• Posjetite BCC (Bingo City Center) ili RK Tuzlanka
+• Opustite se uz kafu i obavite kupovinu lokalnih proizvoda
+• Skenirajte QR kodove na partner lokacijama za osvajanje nagrada!
 
 🌙 Polazak:
 • Pozovite Taxi ili potražite autobusku liniju "34" i "11" u aplikaciji klikom na red vožnje
@@ -192,7 +190,7 @@ const readState = async (): Promise<{ expenses: ExpenseItem[]; tasks: TaskItem[]
 
 const TaskManager: React.FC<TaskManagerProps> = ({ lang }) => {
   const t = copy[lang] ?? copy.en;
-  const [view, setView] = useState<Mode>('expenses');
+  const [view, setView] = useState<Mode>('calendar');
 
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
@@ -330,6 +328,13 @@ const TaskManager: React.FC<TaskManagerProps> = ({ lang }) => {
               {t.itinerary}
             </button>
             <button
+              onClick={() => setView('calendar')}
+              className={`inline-flex items-center gap-2 rounded-2xl px-6 py-4 text-base font-black transition-all ${view === 'calendar' ? 'bg-white text-blue-900 shadow-lg' : 'bg-white/10 text-white/80 backdrop-blur-md'}`}
+            >
+              <CalendarIcon className="h-5 w-5" />
+              {lang === 'bs' ? 'Kalendar događaja' : 'Calendar of Events'}
+            </button>
+            <button
               onClick={() => setView('threeDayPlan')}
               className={`rounded-2xl px-6 py-4 text-base font-black transition-all ${view === 'threeDayPlan' ? 'bg-white text-blue-900 shadow-lg' : 'bg-white/10 text-white/80 backdrop-blur-md'}`}
             >
@@ -341,6 +346,10 @@ const TaskManager: React.FC<TaskManagerProps> = ({ lang }) => {
         {!isLoaded ? (
           <div className="flex justify-center items-center py-20 min-h-[300px]">
             <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : view === 'calendar' ? (
+          <div className="p-6 sm:p-8">
+            <EventCalendarView lang={lang} />
           </div>
         ) : (
           <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1fr_1fr]">

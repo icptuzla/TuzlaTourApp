@@ -6,9 +6,10 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-
+api 
 node_modules
 dist
+.agents
 dist-ssr
 *.local
 android/.gradle/
@@ -24,6 +25,11 @@ android/keystore.properties
 android/**/*.jks
 *.aab
 *.apk
+.agent
+.agents
+.superpowers
+.vscode
+
 
 # Editor directories and files
 .vscode/*
@@ -37,7 +43,8 @@ android/**/*.jks
 *.sw?
 pannellum-2.5.7/
 docs
-
+.env
+.env*.local
 # Local Gemini/Tooling files
 .gemini/
 tsc_output.txt
