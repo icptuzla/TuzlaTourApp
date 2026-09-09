@@ -1,7 +1,7 @@
 {
   "name": "Tuzla Tour Guide",
   "short_name": "Tuzla Guide",
-  "description": "Digital PWA App Tour Guide for Tuzla with interactive maps, gamified quests, QR scanner, GPS support and real-location rewards.",
+  "description": "Tour Guide application for Tuzla city with interactive maps, gamified quests, QR scanner, GPS support and real-location rewards.",
   "id": "/",
   "start_url": "/",
   "scope": "/",

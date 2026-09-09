@@ -13,58 +13,82 @@ let isProtocolRegistered = false;
 let downloadPromise: Promise<boolean> | null = null;
 
 /**
- * Pre-cache Tuzla PMTiles in OPFS in the background if supported,
- * without blocking immediate map rendering.
+ * Normalizes PMTiles URLs to prevent double-slash / protocol-relative hostname bugs.
  */
-export async function ensureTuzlaOfflineMapDownloaded(
-  onProgress?: (progress: OfflineProgress) => void
-): Promise<boolean> {
-  if (downloadPromise) return downloadPromise;
+export function normalizePMTilesUrl(rawUrl: string): { key: string; fetchUrl: string } {
+  let clean = rawUrl.replace(/^pmtiles:\/\//, '');
 
-  downloadPromise = (async () => {
-    try {
-      globalPMTilesProtocol.init();
+  if (clean.startsWith('http://') || clean.startsWith('https://')) {
+    return { key: clean, fetchUrl: clean };
+  }
 
-      if (typeof navigator === 'undefined' || !navigator.storage || !navigator.storage.getDirectory) {
-        return false;
-      }
+  // Ensure path starts with exactly one leading slash
+  const path = '/' + clean.replace(/^\/+/, '');
+  const fetchUrl = typeof window !== 'undefined'
+    ? new URL(path, window.location.href).href
+    : path;
 
-      const root = await navigator.storage.getDirectory();
-      let exists = false;
-      try {
-        const handle = await root.getFileHandle('tuzla.pmtiles');
-        const file = await handle.getFile();
-        if (file && file.size > 1000000) {
-          exists = true;
+  return { key: path, fetchUrl };
+}
+
+/**
+ * Direct Origin Private File System (OPFS) source for zero-network, 100% offline PMTiles access.
+ */
+class OpfsSource implements pmtiles.Source {
+  private fileName: string;
+  private fileHandlePromise: Promise<FileSystemFileHandle | null> | null = null;
+  private cachedFile: File | null = null;
+
+  constructor(fileName: string) {
+    this.fileName = fileName;
+  }
+
+  getKey(): string {
+    return `opfs://${this.fileName}`;
+  }
+
+  private async getHandle(): Promise<FileSystemFileHandle | null> {
+    if (typeof navigator === 'undefined' || !navigator.storage?.getDirectory) return null;
+    if (!this.fileHandlePromise) {
+      this.fileHandlePromise = (async () => {
+        try {
+          const root = await navigator.storage.getDirectory();
+          return await root.getFileHandle(this.fileName);
+        } catch {
+          return null;
         }
-      } catch {
-        exists = false;
-      }
+      })();
+    }
+    return this.fileHandlePromise;
+  }
 
-      if (!exists) {
-        await offlinePlugin.downloadMap(
-          '/maps/tuzla.pmtiles',
-          'tuzla',
-          (prog) => {
-            if (onProgress) onProgress(prog);
-          },
-          '/maps/offline-vector-style.json'
-        );
-      }
-      return true;
-    } catch (err) {
-      console.warn('OPFS background cache warning (using direct stream):', err);
+  async isAvailable(): Promise<boolean> {
+    const handle = await this.getHandle();
+    if (!handle) return false;
+    try {
+      const file = await handle.getFile();
+      return Boolean(file && file.size > 1000000);
+    } catch {
       return false;
     }
-  })();
+  }
 
-  return downloadPromise;
+  async getBytes(offset: number, length: number): Promise<pmtiles.RangeResponse> {
+    const handle = await this.getHandle();
+    if (!handle) throw new Error(`OPFS file ${this.fileName} not available`);
+    if (!this.cachedFile) {
+      this.cachedFile = await handle.getFile();
+    }
+    const slice = this.cachedFile.slice(offset, offset + length);
+    const data = await slice.arrayBuffer();
+    return { data };
+  }
 }
 
 /**
  * Custom PMTiles Fetch Source with in-memory buffer fallback.
- * Solves the issue where static servers (like Vite dev/preview) or Service Workers
- * return HTTP 200 (full file) instead of HTTP 206 (partial content) for Range requests.
+ * Solves the issue where static servers or Service Workers return HTTP 200
+ * instead of HTTP 206 (partial content) for Range requests.
  */
 class RobustFetchSource implements pmtiles.Source {
   private url: string;
@@ -117,7 +141,7 @@ class RobustFetchSource implements pmtiles.Source {
         };
       }
 
-      // If server returned 200 OK (ignored Range header and returned whole file)
+      // If server returned 200 OK (ignored Range header and returned full file)
       if (response.status === 200) {
         const fullBuffer = await response.arrayBuffer();
         this.fullBufferPromise = Promise.resolve(fullBuffer);
@@ -134,10 +158,8 @@ class RobustFetchSource implements pmtiles.Source {
         throw new Error(`PMTiles fetch error: ${response.status} ${response.statusText}`);
       }
     } catch (err: any) {
-      if (err?.name === 'AbortError') {
-        throw err;
-      }
-      console.warn(`Range request failed for ${this.url}, falling back to full buffered archive:`, err);
+      if (err?.name === 'AbortError') throw err;
+      console.warn(`Range request failed for ${this.url}, attempting full buffered archive fallback:`, err);
     }
 
     const fullBuffer = await this.fetchFullBuffer();
@@ -147,29 +169,69 @@ class RobustFetchSource implements pmtiles.Source {
 }
 
 /**
+ * Hybrid Source: tries local OPFS storage first for instantaneous offline responses,
+ * falling back to RobustFetchSource (HTTP Range / buffered archive).
+ */
+class HybridSource implements pmtiles.Source {
+  private key: string;
+  private opfs: OpfsSource;
+  private fetchSource: RobustFetchSource;
+  private preferred: 'opfs' | 'fetch' | 'unknown' = 'unknown';
+
+  constructor(key: string, url: string, opfsFileName: string) {
+    this.key = key;
+    this.opfs = new OpfsSource(opfsFileName);
+    this.fetchSource = new RobustFetchSource(url);
+  }
+
+  getKey(): string {
+    return this.key;
+  }
+
+  async getBytes(
+    offset: number,
+    length: number,
+    signal?: AbortSignal,
+    etag?: string
+  ): Promise<pmtiles.RangeResponse> {
+    if (this.preferred === 'opfs') {
+      try {
+        return await this.opfs.getBytes(offset, length);
+      } catch (err) {
+        console.warn('OPFS read failed, falling back to network fetch:', err);
+        this.preferred = 'fetch';
+      }
+    }
+
+    if (this.preferred === 'unknown') {
+      const hasOpfs = await this.opfs.isAvailable();
+      if (hasOpfs) {
+        this.preferred = 'opfs';
+        try {
+          return await this.opfs.getBytes(offset, length);
+        } catch (err) {
+          console.warn('Initial OPFS read failed, falling back to fetch:', err);
+          this.preferred = 'fetch';
+        }
+      } else {
+        this.preferred = 'fetch';
+      }
+    }
+
+    return await this.fetchSource.getBytes(offset, length, signal, etag);
+  }
+}
+
+/**
  * Unified PMTiles & Offline Protocol manager for MapLibre GL JS.
  * Supports both `pmtiles://` and `offline-pmtiles://` with automatic fallbacks.
  */
 class RobustPMTilesProtocol {
-  private tilesMap = new Map<string, pmtiles.PMTiles>();
-
-  private getPMTiles(rawUrl: string): pmtiles.PMTiles {
-    let resolvedUrl = rawUrl;
-    if (typeof window !== 'undefined' && !rawUrl.startsWith('http://') && !rawUrl.startsWith('https://')) {
-      resolvedUrl = new URL(rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`, window.location.href).href;
-    }
-
-    let instance = this.tilesMap.get(resolvedUrl);
-    if (!instance) {
-      const source = new RobustFetchSource(resolvedUrl);
-      instance = new pmtiles.PMTiles(source);
-      this.tilesMap.set(resolvedUrl, instance);
-    }
-    return instance;
-  }
+  private protocolInstance = new pmtiles.Protocol();
+  private initialized = false;
 
   public init() {
-    if (isProtocolRegistered) return;
+    if (this.initialized || isProtocolRegistered) return;
 
     // 1. Register offline-pmtiles protocol from @makina-corpus/maplibre-offline-pmtiles
     try {
@@ -178,20 +240,45 @@ class RobustPMTilesProtocol {
       console.warn('OfflinePlugin registerProtocol notice:', err);
     }
 
-    // 2. Register pmtiles protocol handler for MapLibre GL JS v4/v5
+    // 2. Setup Tuzla archive hybrid source (OPFS + HTTP Range fallback)
+    const tuzlaPath = '/maps/tuzla.pmtiles';
+    const tuzlaUrl = typeof window !== 'undefined'
+      ? new URL(tuzlaPath, window.location.href).href
+      : tuzlaPath;
+
+    const tuzlaSource = new HybridSource(tuzlaPath, tuzlaUrl, 'tuzla.pmtiles');
+    const tuzlaInstance = new pmtiles.PMTiles(tuzlaSource);
+
+    // Pre-register for all common key variations
+    this.protocolInstance.add(tuzlaInstance);
+    const altKeys = ['maps/tuzla.pmtiles', tuzlaUrl, '/maps/tuzla.pmtiles', 'tuzla.pmtiles', 'tuzla'];
+    for (const k of altKeys) {
+      (this.protocolInstance as any).tiles.set(k, tuzlaInstance);
+    }
+
+    // 3. Register pmtiles protocol handler for MapLibre GL JS v4/v5
     maplibregl.addProtocol('pmtiles', async (params: any, abortController?: AbortController) => {
       const url: string = params.url || '';
 
-      // TileJSON metadata request (e.g. "pmtiles:///maps/tuzla.pmtiles")
+      // TileJSON metadata request (e.g. "pmtiles:///maps/tuzla.pmtiles" or "pmtiles://maps/tuzla.pmtiles")
       if (params.type === 'json') {
-        const rawUrl = url.replace(/^pmtiles:\/\//, '');
-        const instance = this.getPMTiles(rawUrl);
+        const { key, fetchUrl } = normalizePMTilesUrl(url);
+        let instance = this.protocolInstance.get(key)
+          || this.protocolInstance.get(key.replace(/^\//, ''))
+          || this.protocolInstance.get('/' + key.replace(/^\//, ''));
+
+        if (!instance) {
+          const fallbackSource = new RobustFetchSource(fetchUrl);
+          instance = new pmtiles.PMTiles(fallbackSource);
+          this.protocolInstance.add(instance);
+        }
+
         const header = await instance.getHeader();
         return {
           data: {
             tilejson: '3.0.0',
             scheme: 'xyz',
-            tiles: [`pmtiles://${rawUrl}/{z}/{x}/{y}`],
+            tiles: [`pmtiles://${key.replace(/^\/+/, '/')}/{z}/{x}/{y}`],
             minzoom: header.minZoom,
             maxzoom: header.maxZoom,
             bounds: [header.minLon, header.minLat, header.maxLon, header.maxLat],
@@ -202,31 +289,90 @@ class RobustPMTilesProtocol {
       // Tile request (e.g. "pmtiles:///maps/tuzla.pmtiles/14/9041/5923")
       const tileMatch = url.match(/pmtiles:\/\/(.+)\/(\d+)\/(\d+)\/(\d+)/);
       if (tileMatch) {
-        const rawUrl = tileMatch[1];
+        const rawPath = tileMatch[1];
         const z = parseInt(tileMatch[2], 10);
         const x = parseInt(tileMatch[3], 10);
         const y = parseInt(tileMatch[4], 10);
 
-        const instance = this.getPMTiles(rawUrl);
-        const signal = abortController?.signal;
-        const resp = await instance.getZxy(z, x, y, signal);
+        const { key, fetchUrl } = normalizePMTilesUrl(rawPath);
+        let instance = this.protocolInstance.get(key)
+          || this.protocolInstance.get(key.replace(/^\//, ''))
+          || this.protocolInstance.get('/' + key.replace(/^\//, ''));
 
+        if (!instance) {
+          const fallbackSource = new RobustFetchSource(fetchUrl);
+          instance = new pmtiles.PMTiles(fallbackSource);
+          this.protocolInstance.add(instance);
+        }
+
+        const resp = await instance.getZxy(z, x, y, abortController?.signal);
         if (resp && resp.data) {
           return {
-            data: resp.data, // ArrayBuffer decoded MVT vector tile
+            data: new Uint8Array(resp.data),
             cacheControl: resp.cacheControl,
             expires: resp.expires,
           };
         }
-        return { data: new ArrayBuffer(0) };
+        return { data: new Uint8Array(0) };
       }
 
-      throw new Error(`Unrecognized pmtiles URL: ${url}`);
+      // Delegate any unhandled requests to the official pmtiles protocol
+      return this.protocolInstance.tilev4(params, abortController as any);
     });
 
+    this.initialized = true;
     isProtocolRegistered = true;
-    console.log('✅ PMTiles protocol initialized and registered for MapLibre');
+    console.log('✅ Robust PMTiles & OPFS protocol initialized and registered for MapLibre');
   }
 }
 
 export const globalPMTilesProtocol = new RobustPMTilesProtocol();
+
+/**
+ * Pre-cache Tuzla PMTiles in OPFS in the background if supported,
+ * without blocking immediate map rendering.
+ */
+export async function ensureTuzlaOfflineMapDownloaded(
+  onProgress?: (progress: OfflineProgress) => void
+): Promise<boolean> {
+  if (downloadPromise) return downloadPromise;
+
+  downloadPromise = (async () => {
+    try {
+      globalPMTilesProtocol.init();
+
+      if (typeof navigator === 'undefined' || !navigator.storage || !navigator.storage.getDirectory) {
+        return false;
+      }
+
+      const root = await navigator.storage.getDirectory();
+      let exists = false;
+      try {
+        const handle = await root.getFileHandle('tuzla.pmtiles');
+        const file = await handle.getFile();
+        if (file && file.size > 1000000) {
+          exists = true;
+        }
+      } catch {
+        exists = false;
+      }
+
+      if (!exists) {
+        await offlinePlugin.downloadMap(
+          '/maps/tuzla.pmtiles',
+          'tuzla',
+          (prog) => {
+            if (onProgress) onProgress(prog);
+          },
+          '/maps/offline-vector-style.json'
+        );
+      }
+      return true;
+    } catch (err) {
+      console.warn('OPFS background cache warning (using direct stream):', err);
+      return false;
+    }
+  })();
+
+  return downloadPromise;
+}

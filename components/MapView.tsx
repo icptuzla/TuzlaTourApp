@@ -26,11 +26,13 @@ const GEO_MAP_KEY = ['65090a03070e4e18', '98694f7a18ba415b'].join('');
 const ROUTE_MAP_KEY = ['63e8b34f44974d71', 'bc70aad63e5b56ba'].join('');
 
 const OFFLINE_STYLE = '/maps/offline-vector-style.json';
+const RASTER_STYLE = '/maps/offline-style.json';
 const ONLINE_STYLE = `https://maps.geoapify.com/v1/styles/osm-liberty/style.json?apiKey=${import.meta.env.VITE_GEOAPIFY_MAP_TILES_API || import.meta.env.VITE_GEOAPIFY_STATIC_API || GEO_MAP_KEY}`;
 
 const MAP_LAYER_OPTIONS = [
   { id: 'geoapify', name: { bs: 'Geoapify OSM (Online)', en: 'Geoapify OSM (Online)' }, url: ONLINE_STYLE },
-  { id: 'offline', name: { bs: 'Lokalna PMTiles (Offline)', en: 'Local PMTiles (Offline)' }, url: OFFLINE_STYLE },
+  { id: 'raster', name: { bs: 'OpenStreetMap (Raster)', en: 'OpenStreetMap (Raster)' }, url: RASTER_STYLE },
+  { id: 'offline', name: { bs: 'Lokalna PMTiles 3D (Offline)', en: 'Local PMTiles 3D (Offline)' }, url: OFFLINE_STYLE },
 ];
 interface RoutePoiPreset {
   name: Partial<Record<Language, string>> & { en: string; bs: string };
@@ -174,19 +176,23 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
 
     setActiveStyle(styleUrl);
     setShowLayerMenu(false);
-    setIsLoaded(false);
 
     if (styleUrl === OFFLINE_STYLE) {
-      map.current.setMaxZoom(15);
-      if (map.current.getZoom() > 15) {
-        map.current.setZoom(15);
+      map.current.setMaxZoom(16);
+      if (map.current.getZoom() > 16) {
+        map.current.setZoom(16);
       }
     } else {
       map.current.setMaxZoom(20);
     }
 
     map.current.setStyle(styleUrl);
-    map.current.once('style.load', () => setIsLoaded(true));
+    map.current.once('style.load', () => {
+      setIsLoaded(true);
+      if (isNavigating && selectedTarget && userLocationRef.current) {
+        calculateRoute(userLocationRef.current, selectedTarget);
+      }
+    });
   };
 
   // Expose global callback for Mapbox popup navigation clicks
@@ -514,11 +520,11 @@ const MapView: React.FC<MapViewProps> = ({ lang, features, unlockedRewards = [] 
     });
 
     map.current.on('error', (e) => {
-      console.warn('🗺️ MapView style error:', e.error?.message);
+      console.warn('🗺️ MapView notice:', e.error?.message || e);
       if (!navigator.onLine && activeStyle !== OFFLINE_STYLE && map.current) {
         setActiveStyle(OFFLINE_STYLE);
-        map.current.setMaxZoom(15);
-        if (map.current.getZoom() > 15) map.current.setZoom(15);
+        map.current.setMaxZoom(16);
+        if (map.current.getZoom() > 16) map.current.setZoom(16);
         map.current.setStyle(OFFLINE_STYLE);
       }
     });

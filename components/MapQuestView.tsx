@@ -50,7 +50,7 @@ export const OFFLINE_STYLE = '/maps/offline-vector-style.json';
 const MAP_LAYER_OPTIONS = [
   { id: 'geoapify', name: { bs: 'Geoapify 3D (Primarna)', en: 'Geoapify 3D (Primary)' }, url: GEOAPIFY_MAPTILER_3D },
   { id: 'voyager', name: { bs: 'CARTO Voyager (Rezervna)', en: 'CARTO Voyager (Fallback)' }, url: CARTO_VOYAGER_STYLE },
-  { id: 'offline', name: { bs: 'Lokalna PMTiles (Offline)', en: 'Local PMTiles (Offline)' }, url: OFFLINE_STYLE },
+  { id: 'offline', name: { bs: 'Lokalna PMTiles 3D (Offline)', en: 'Local PMTiles 3D (Offline)' }, url: OFFLINE_STYLE },
 ];
 
 const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRewards, onRewardFound, navigationTarget, onClearNavigation, initialOpenScanner = false }) => {
@@ -191,47 +191,59 @@ const MapQuestView: React.FC<MapQuestViewProps> = ({ lang, features, unlockedRew
       if (mapInstance.getStyle().name?.toLowerCase().includes('maptiler') || (mapInstance as any)._requestedStyleURL?.includes('geoapify')) applyGeoapifyPaintOverrides(mapInstance);
       mapInstance.addControl(new maplibregl.NavigationControl({ showCompass: true, visualizePitch: true }), 'bottom-right');
       if (initialStyle === OFFLINE_STYLE) {
-        mapInstance.setMaxZoom(15);
-        if (mapInstance.getZoom() > 15) mapInstance.setZoom(15);
+        mapInstance.setMaxZoom(16);
+        if (mapInstance.getZoom() > 16) mapInstance.setZoom(16);
       }
     });
     mapInstance.on('styledata', () => {
-      if (map.current && activeStyle === GEOAPIFY_MAPTILER_3D) applyGeoapifyPaintOverrides(map.current);
+      if (map.current) {
+        const styleName = map.current.getStyle()?.name?.toLowerCase() || '';
+        const reqUrl = (map.current as any)._requestedStyleURL || '';
+        if (styleName.includes('maptiler') || reqUrl.includes('geoapify')) {
+          applyGeoapifyPaintOverrides(map.current);
+        }
+      }
     });
     mapInstance.on('error', async (e) => {
       const msg = e.error?.message || '';
-      console.warn('🗺️ Map style error:', msg);
+      console.warn('🗺️ Map style notice:', msg);
       if (!navigator.onLine && !isOfflineMode) {
         await ensureTuzlaOfflineMapDownloaded();
         setIsOfflineMode(true);
         setActiveStyle(OFFLINE_STYLE);
-        mapInstance.setMaxZoom(15);
-        if (mapInstance.getZoom() > 15) mapInstance.setZoom(15);
+        mapInstance.setMaxZoom(16);
+        if (mapInstance.getZoom() > 16) mapInstance.setZoom(16);
         mapInstance.setStyle(OFFLINE_STYLE);
-      } else if (navigator.onLine) {
-        setActiveStyle(CARTO_VOYAGER_STYLE);
-        mapInstance.setMaxZoom(20);
-        mapInstance.setStyle(CARTO_VOYAGER_STYLE);
       }
     });
     return () => { mapInstance.remove(); map.current = null; };
   }, []);
 
   const handleSwitchLayer = (styleUrl: string) => {
-    if (map.current) {
-      if (styleUrl === OFFLINE_STYLE) {
-        ensureTuzlaOfflineMapDownloaded().catch(() => {});
-      }
-      setActiveStyle(styleUrl);
-      if (styleUrl === OFFLINE_STYLE) {
-        map.current.setMaxZoom(15);
-        if (map.current.getZoom() > 15) map.current.setZoom(15);
-      } else {
-        map.current.setMaxZoom(20);
-      }
-      map.current.setStyle(styleUrl);
+    if (!map.current || activeStyle === styleUrl) {
       setShowLayerMenu(false);
+      return;
     }
+
+    if (styleUrl === OFFLINE_STYLE) {
+      ensureTuzlaOfflineMapDownloaded().catch(() => {});
+    }
+    setActiveStyle(styleUrl);
+    if (styleUrl === OFFLINE_STYLE) {
+      map.current.setMaxZoom(16);
+      if (map.current.getZoom() > 16) map.current.setZoom(16);
+    } else {
+      map.current.setMaxZoom(20);
+    }
+    map.current.setStyle(styleUrl);
+    map.current.once('style.load', () => {
+      setIsLoaded(true);
+      if (isNavigating && selectedNavTarget) {
+        const start = userLocationRef.current || [TUZLA_CENTER[1], TUZLA_CENTER[0]];
+        calculateRoute(start, selectedNavTarget);
+      }
+    });
+    setShowLayerMenu(false);
   };
 
   useEffect(() => {
