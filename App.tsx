@@ -2,6 +2,9 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { App as CapApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
+import { Geolocation } from '@capacitor/geolocation';
+import Dashboard from './components/Dashboard';
+import { supabase } from './lib/supabase';
 import { Menu } from 'lucide-react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -35,6 +38,7 @@ const Accommodation = React.lazy(() => import('./components/Accommodation'));
 const getTabFromPath = (path: string): AppTab => {
   switch (path) {
     case '/': return AppTab.LANDING;
+    case '/dashboard': return AppTab.DASHBOARD;
     case '/city-guide': return AppTab.CITY_GUIDE;
     case '/history': return AppTab.HISTORY;
     case '/map': return AppTab.MAP;
@@ -51,6 +55,7 @@ const getTabFromPath = (path: string): AppTab => {
 const getPathFromTab = (tab: AppTab): string => {
   switch (tab) {
     case AppTab.LANDING: return '/';
+    case AppTab.DASHBOARD: return '/dashboard';
     case AppTab.CITY_GUIDE: return '/city-guide';
     case AppTab.HISTORY: return '/history';
     case AppTab.MAP: return '/map';
@@ -87,6 +92,61 @@ const AppContent: React.FC = () => {
   const [autoOpenScanner, setAutoOpenScanner] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isWalletUnlocked, setIsWalletUnlocked] = useState(false);
+
+  useEffect(() => {
+    if (!supabase) return;
+    let active = true;
+    const syncServerProgress = async (hasSession: boolean) => {
+      if (!hasSession) return;
+      const { data, error } = await supabase.rpc('get_my_tuzla_dashboard');
+      if (!active || error || !data) return;
+      const completedIds = (data.completed_quests || []).map((quest: { quest_id: string }) => quest.quest_id);
+      setUnlockedRewards(completedIds);
+    };
+    supabase.auth.getSession().then(({ data }) => syncServerProgress(!!data.session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) window.setTimeout(() => { void syncServerProgress(true); }, 0);
+    });
+    return () => { active = false; subscription.unsubscribe(); };
+  }, [setUnlockedRewards]);
+
+  const handleQuestReward = async (id: string, qrPayload?: string): Promise<boolean> => {
+    if (!supabase || !qrPayload) {
+      window.alert(lang === 'bs' ? 'Prijava i Supabase veza su potrebni za osvajanje XP bodova.' : 'Sign in and connect Supabase to earn XP.');
+      return false;
+    }
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      window.alert(lang === 'bs' ? 'Prijavite se na /dashboard prije završetka potrage.' : 'Please sign in at /dashboard before completing a quest.');
+      return false;
+    }
+    try {
+      const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+      const { data, error } = await supabase.rpc('complete_tuzla_quest', {
+        p_quest_id: id,
+        p_qr_payload: qrPayload,
+        p_lat: position.coords.latitude,
+        p_lon: position.coords.longitude,
+      });
+      if (error) throw error;
+      if (!data?.ok) {
+        const messages: Record<string,string> = {
+          invalid_qr: lang === 'bs' ? 'QR kod nije potvrđen na serveru.' : 'QR code could not be verified.',
+          outside_radius: lang === 'bs' ? 'Nalazite se izvan dozvoljenog GPS područja.' : 'You are outside the allowed GPS radius.',
+          already_completed: lang === 'bs' ? 'Ova lokacija je već završena.' : 'This location is already completed.',
+          gps_required: lang === 'bs' ? 'GPS lokacija je obavezna.' : 'GPS location is required.',
+        };
+        window.alert(messages[data?.code] || (lang === 'bs' ? 'Potraga nije potvrđena.' : 'Quest verification failed.'));
+        return false;
+      }
+      setUnlockedRewards(prev => prev.includes(id) ? prev : [...prev, id]);
+      return true;
+    } catch (err) {
+      console.error('[Quest completion]', err);
+      window.alert(lang === 'bs' ? 'Provjera lokacije nije uspjela. Uključite GPS i pokušajte ponovo.' : 'Location verification failed. Enable GPS and try again.');
+      return false;
+    }
+  };
 
   const navigateToTab = (tab: AppTab, options?: { openScanner?: boolean }) => {
     const path = getPathFromTab(tab);
@@ -192,6 +252,7 @@ const AppContent: React.FC = () => {
               }>
                 <Routes>
                   <Route path="/" element={<LandingPage lang={lang} onNavigate={navigateToTab} />} />
+                  <Route path="/dashboard" element={<Dashboard lang={lang} />} />
                   <Route path="/city-guide" element={<CityGuide lang={lang} />} />
                   <Route path="/history" element={<History lang={lang} />} />
                   <Route path="/map" element={
@@ -202,7 +263,7 @@ const AppContent: React.FC = () => {
                       lang={lang}
                       features={features}
                       unlockedRewards={unlockedRewards}
-                      onRewardFound={(id) => setUnlockedRewards((prev) => (prev.includes(id) ? prev : [...prev, id]))}
+                      onRewardFound={handleQuestReward}
                       navigationTarget={navigationTarget}
                       onClearNavigation={() => setNavigationTarget(null)}
                       initialOpenScanner={autoOpenScanner}
@@ -227,7 +288,7 @@ const AppContent: React.FC = () => {
                       lang={lang}
                       features={features}
                       unlockedRewards={unlockedRewards}
-                      onRewardFound={(id) => setUnlockedRewards((prev) => (prev.includes(id) ? prev : [...prev, id]))}
+                      onRewardFound={handleQuestReward}
                       initialTarget={navigationTarget}
                       onNavigate={(poi) => {
                         setNavigationTarget(poi);

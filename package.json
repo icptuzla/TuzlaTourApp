@@ -67,7 +67,9 @@
     "react-router-dom": "^7.18.1",
     "three.js": "^0.77.1",
     "vite-plugin-node-polyfills": "^0.26.0",
-    "vite-pwa": "^1.0.2"
+    "vite-pwa": "^1.0.2",
+    "@supabase/supabase-js": "^2.95.0",
+    "qrcode.react": "^4.2.0"
   },
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",
