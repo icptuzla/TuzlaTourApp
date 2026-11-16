@@ -52,12 +52,12 @@ Open `/dashboard`, sign in with the admin account, then open **Admin control roo
 
 For each quest:
 
-1. Enter the exact text encoded in its physical QR code.
-2. Use at least 16 characters. Prefer a unique, unpredictable token.
-3. Save it. The database stores a SHA-256 digest, not the raw QR payload.
+1. Click **Generate secure QR** to create a unique random payload, or paste the exact text from an existing QR if it is at least 16 characters.
+2. Click **Download PNG** and print/place that QR at the matching physical location.
+3. Click **Save QR**. The database stores a SHA-256 digest, not the raw QR payload.
 4. Confirm the status changes to **QR configured**.
 
-If the current printed QR codes contain only short IDs, replace them with longer unique payloads and reprint them. The scanner recognises the quest ID prefix, so a useful payload format is `quest_id:random-secret-string` (the full value must be what the QR encodes and what is entered in the admin panel).
+Generated payloads use the quest ID as a prefix followed by a random secret. The scanner recognises that prefix, while the database verifies the complete payload. Replace short/old QR codes with the newly generated PNGs; do not reuse the same payload at different locations.
 
 All active quests are configured to require GPS within their existing **20 metre** radius. The completion RPC validates the signed-in player, active quest, QR digest, GPS coordinates, unique completion, and XP transaction on the server. A static QR can still be photographed/shared and GPS can be spoofed on a compromised device; this is anti-replay and location friction, not perfect proof of physical presence.
 
