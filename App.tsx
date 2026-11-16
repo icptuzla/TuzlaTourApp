@@ -105,7 +105,7 @@ const AppContent: React.FC = () => {
     };
     supabase.auth.getSession().then(({ data }) => syncServerProgress(!!data.session));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) void syncServerProgress(true);
+      if (session) window.setTimeout(() => { void syncServerProgress(true); }, 0);
     });
     return () => { active = false; subscription.unsubscribe(); };
   }, [setUnlockedRewards]);
