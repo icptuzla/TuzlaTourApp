@@ -25,7 +25,7 @@ interface ARGuideProps {
   onNavigate?: (poi: Location) => void;
   initialTarget?: Location | null;
   unlockedRewards?: string[];
-  onRewardFound?: (id: string) => void;
+  onRewardFound?: (id: string, qrPayload?: string) => void | boolean | Promise<void | boolean>;
 }
 
 export interface ARGuidePOI {
@@ -579,11 +579,15 @@ export const ARGuide: React.FC<ARGuideProps> = ({
     setTargetDistance(null);
   };
 
-  const handleRewardFoundInternal = (id: string) => {
+  const handleRewardFoundInternal = async (id: string, qrPayload?: string): Promise<boolean> => {
+    if (onRewardFound) {
+      const accepted = await onRewardFound(id, qrPayload);
+      if (accepted === false) return false;
+    }
     if (!localUnlockedRewards.includes(id)) {
       setLocalUnlockedRewards([...localUnlockedRewards, id]);
     }
-    if (onRewardFound) onRewardFound(id);
+    return true;
   };
 
   // Turn guidance logic
