@@ -13,7 +13,8 @@ import {
   Bed,
   X,
   History as HistoryIcon,
-  Heart
+  Heart,
+  Trophy
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -42,6 +43,17 @@ interface NavItemConfig {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, activeTab, onSelectTab, lang }) => {
   const navItems: NavItemConfig[] = [
+    {
+      id: AppTab.DASHBOARD,
+      icon: Trophy,
+      label: { en: 'XP Dashboard', bs: 'XP Kontrolna tabla', de: 'XP-Dashboard', tr: 'XP Paneli' },
+      inactiveClass: 'bg-gradient-to-r from-amber-50 to-yellow-100 text-amber-900 hover:from-amber-100 hover:to-yellow-200',
+      inactiveIconClass: 'text-amber-700',
+      inactiveBorderClass: 'border-amber-200/70',
+      activeClass: 'bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 text-slate-950 font-black',
+      activeGlow: 'shadow-[0_8px_20px_rgba(251,191,36,0.45)]',
+      activeBorder: 'border-amber-300/80'
+    },
     {
       id: AppTab.LANDING,
       icon: Home,
