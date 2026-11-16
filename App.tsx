@@ -93,6 +93,23 @@ const AppContent: React.FC = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isWalletUnlocked, setIsWalletUnlocked] = useState(false);
 
+  useEffect(() => {
+    if (!supabase) return;
+    let active = true;
+    const syncServerProgress = async (hasSession: boolean) => {
+      if (!hasSession) return;
+      const { data, error } = await supabase.rpc('get_my_tuzla_dashboard');
+      if (!active || error || !data) return;
+      const completedIds = (data.completed_quests || []).map((quest: { quest_id: string }) => quest.quest_id);
+      setUnlockedRewards(completedIds);
+    };
+    supabase.auth.getSession().then(({ data }) => syncServerProgress(!!data.session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) void syncServerProgress(true);
+    });
+    return () => { active = false; subscription.unsubscribe(); };
+  }, [setUnlockedRewards]);
+
   const handleQuestReward = async (id: string, qrPayload?: string): Promise<boolean> => {
     if (!supabase || !qrPayload) {
       window.alert(lang === 'bs' ? 'Prijava i Supabase veza su potrebni za osvajanje XP bodova.' : 'Sign in and connect Supabase to earn XP.');
@@ -271,7 +288,7 @@ const AppContent: React.FC = () => {
                       lang={lang}
                       features={features}
                       unlockedRewards={unlockedRewards}
-                      onRewardFound={(id) => setUnlockedRewards((prev) => (prev.includes(id) ? prev : [...prev, id]))}
+                      onRewardFound={handleQuestReward}
                       initialTarget={navigationTarget}
                       onNavigate={(poi) => {
                         setNavigationTarget(poi);
