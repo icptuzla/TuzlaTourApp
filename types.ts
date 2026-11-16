@@ -174,6 +174,7 @@ export interface TranslationSet {
 
 export enum AppTab {
   LANDING = 'landing',
+  DASHBOARD = 'dashboard',
   CITY_GUIDE = 'cityGuide',
   HISTORY = 'history',
   FOOD = 'food',
