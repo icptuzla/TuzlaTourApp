@@ -1,15 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { createClient, type Session } from '@supabase/supabase-js';
+import type { Session } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
 import {
   Activity, ArrowUpRight, Award, CheckCircle2, ChevronRight, Crown,
   Gauge, LogOut, Mail, MapPin, ShieldCheck, Sparkles, Star, Trophy, Users, Zap
 } from 'lucide-react';
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = supabaseUrl && supabaseKey
-  ? createClient(supabaseUrl, supabaseKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } })
-  : null;
 
 type Lang = 'bs' | 'en' | 'de' | 'tr';
 type PlayerDashboard = {
