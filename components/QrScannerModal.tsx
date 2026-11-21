@@ -12,7 +12,7 @@ export interface QrScannerModalProps {
   onClose: () => void;
   lang: Language;
   unlockedRewards: string[];
-  onRewardFound: (id: string) => void;
+  onRewardFound: (id: string, qrPayload?: string) => void | boolean | Promise<void | boolean>;
   onSelectVideo?: (videoUrl: string) => void;
   isUtilityMode?: boolean;
   enableInfiniteAnimations?: boolean;
@@ -131,20 +131,25 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
           console.warn('[QR Scanner] Ledger update skipped:', e);
         }
 
-        if (unlockedRewards.includes(target.id)) {
+        try {
+          const accepted = await onRewardFound(target.id, trimmedText);
+          if (accepted === false) {
+            setScannerFeedback({
+              text: lang === 'bs' ? 'Potraga nije potvrđena. Provjerite prijavu i GPS.' : 'Quest not verified. Check sign-in and GPS.',
+              type: 'error',
+            });
+            setTimeout(() => setScannerFeedback(null), 4000);
+            return;
+          }
+        } catch (error) {
+          console.error('[QR Scanner] Quest verification failed:', error);
           setScannerFeedback({
-            text:
-              lang === 'bs'
-                ? `${target.name.bs} je već otključan.`
-                : `${target.name.en} is already unlocked.`,
-            type: 'success',
+            text: lang === 'bs' ? 'Greška pri potvrdi potrage.' : 'Quest verification error.',
+            type: 'error',
           });
-          setTimeout(() => setScannerFeedback(null), 3000);
-          onClose();
+          setTimeout(() => setScannerFeedback(null), 4000);
           return;
         }
-
-        onRewardFound(target.id);
         setScannerFeedback({
           text:
             lang === 'bs'

@@ -24,17 +24,18 @@ export interface RoutePoiPreset {
 }
 
 export const QUEST_TARGETS: QuestTarget[] = [
-  { id: 'trg_slobode', name: { en: 'Freedom Square', bs: 'Trg slobode' }, Html5Qrcode: '/assets/Gallery/QuestQRLocations/QRTrgSlobode.png', Image: '/assets/Gallery/QuestQRLocations/trgslobode.webp' },
-  { id: 'salt_square', name: { en: 'Salt Square', bs: 'Solni trg' }, Html5Qrcode: '/assets/Gallery/QuestQRLocations/QRsonitrg.png', Image: '/assets/Gallery/QuestQRLocations/sonitrg.webp' },
-  { id: 'palancinkara', name: { en: 'Pancake Bagi', bs: 'Palančikara Bagi' }, Html5Qrcode: '/assets/Gallery/Food/QuestQRLocations/QRpalacinkara.webp', Image: '/assets/Gallery/Food/bagi.webp' },
-  { id: 'slana_banja', name: { en: 'Slana Banja', bs: 'Slana Banja' }, Html5Qrcode: '/assets/Gallery/QuestQRLocations/QRBanja.png', Image: '/assets/Gallery/Photos/tuzla24.webp' },
-  { id: 'kapija', name: { en: 'Kapija', bs: 'Kapija' }, Html5Qrcode: '/assets/Gallery/QuestQRLocations/QRkapija.png', Image: '/assets/Gallery/QuestQRLocations/kapija.webp' },
-  { id: 'slapovi', name: { en: 'Waterfalls', bs: 'Slapovi' }, Html5Qrcode: '/assets/Gallery/QuestQRLocations/QRslapovi.png', Image: '/assets/Gallery/QuestQRLocations/tzslapovi.webp' },
-  { id: 'atelje_ismet', name: { en: 'Atelje Ismet Mujezinovic', bs: 'Atelje Ismet Mujezinović' }, Html5Qrcode: '/assets/Gallery/QuestQRLocations/QRAtelje.png', Image: '/assets/Gallery/QuestQRLocations/atelje.webp' },
-  { id: 'bingo_city_centar', name: { en: 'Bingo City Center', bs: 'Bingo City Centar' }, Html5Qrcode: '/assets/Gallery/QuestQRLocations/QRBingoCityCenter.png', Image: '/assets/icons/Bingo-supermarket.webp', website: 'https://tuzla.bingocitycenter.ba/' },
-  { id: 'mesa_selimovic', name: { en: 'Mesa Selimovic', bs: 'Meša Selimović' }, Html5Qrcode: '/assets/Gallery/QuestQRLocations/QRMesaStatue.png', Image: '/assets/Gallery/QuestQRLocations/TuzlaMesaS.webp', video: '/assets/Gallery/QuestQRLocations/MesaSelimovic.mp4', panorama: '/assets/Gallery/QuestQRLocations/Tvrko pannellum/mesa360.webp', panoramaHaov: 270 },
-  { id: 'tvrtko_park', name: { en: 'King Tvrtko Park', bs: 'Park Kralja Tvrtka I' }, Html5Qrcode: '/assets/Gallery/QuestQRLocations/QRtvrtko.png', Image: '/assets/Gallery/Photos/tuzla12.webp' },
-  { id: 'panonika', name: { en: 'Pannonian Lakes', bs: 'Panonska jezera' }, Html5Qrcode: '/assets/Gallery/QuestQRLocations/QRpanonika.png', Image: '/assets/Gallery/QuestQRLocations/panonsko jezero.png' },
+  { id: 'stara_cesma', name: { en: 'Old Town Fountain', bs: 'Stara Česma' }, Html5Qrcode: 'stara_cesma', Image: '/assets/Gallery/Photos/tuzla24.webp' },
+  { id: 'trg_slobode', name: { en: 'Freedom Square', bs: 'Trg slobode' }, Html5Qrcode: '/assets/Gallery/QuestQRLocations/QuestQR/QRTrgSlobode.png', Image: '/assets/Gallery/QuestQRLocations/trgslobode.webp' },
+  { id: 'salt_square', name: { en: 'Salt Square', bs: 'Solni trg' }, Html5Qrcode: '/assets/Gallery/QuestQRLocations/QuestQR/QRsonitrg.png', Image: '/assets/Gallery/QuestQRLocations/sonitrg.webp' },
+  { id: 'palancinkara', name: { en: 'Pancake Bagi', bs: 'Palančikara Bagi' }, Html5Qrcode: '/assets/Gallery/QuestQRLocations/QuestQR/QRpalacinkara.png', Image: '/assets/Gallery/Food/bagi.webp' },
+  { id: 'slana_banja', name: { en: 'Slana Banja', bs: 'Slana Banja' }, Html5Qrcode: '/assets/Gallery/QuestQRLocations/QuestQR/QRBanja.png', Image: '/assets/Gallery/Photos/tuzla24.webp' },
+  { id: 'kapija', name: { en: 'Kapija', bs: 'Kapija' }, Html5Qrcode: '/assets/Gallery/QuestQRLocations/QuestQR/QRkapija.png', Image: '/assets/Gallery/QuestQRLocations/kapija.webp' },
+  { id: 'slapovi', name: { en: 'Waterfalls', bs: 'Slapovi' }, Html5Qrcode: '/assets/Gallery/QuestQRLocations/QuestQR/QRslapovi.png', Image: '/assets/Gallery/QuestQRLocations/tzslapovi.webp' },
+  { id: 'atelje_ismet', name: { en: 'Atelje Ismet Mujezinovic', bs: 'Atelje Ismet Mujezinović' }, Html5Qrcode: '/assets/Gallery/QuestQRLocations/QuestQR/QRAtelje.png', Image: '/assets/Gallery/QuestQRLocations/atelje.webp' },
+  { id: 'bingo_city_centar', name: { en: 'Bingo City Center', bs: 'Bingo City Centar' }, Html5Qrcode: '/assets/Gallery/QuestQRLocations/QuestQR/QRBingoCityCenter.png', Image: '/assets/icons/Bingo-supermarket.webp', website: 'https://tuzla.bingocitycenter.ba/' },
+  { id: 'mesa_selimovic', name: { en: 'Mesa Selimovic', bs: 'Meša Selimović' }, Html5Qrcode: '/assets/Gallery/QuestQRLocations/QuestQR/QRMesaStatue.png', Image: '/assets/Gallery/QuestQRLocations/TuzlaMesaS.webp', video: '/assets/Gallery/QuestQRLocations/MesaSelimovic.mp4', panorama: '/assets/Gallery/QuestQRLocations/Tvrko pannellum/mesa360.webp', panoramaHaov: 270 },
+  { id: 'tvrtko_park', name: { en: 'King Tvrtko Park', bs: 'Park Kralja Tvrtka I' }, Html5Qrcode: '/assets/Gallery/QuestQRLocations/QuestQR/QRtvrtko.png', Image: '/assets/Gallery/Photos/tuzla12.webp' },
+  { id: 'panonika', name: { en: 'Pannonian Lakes', bs: 'Panonska jezera' }, Html5Qrcode: '/assets/Gallery/QuestQRLocations/QuestQR/QRPannonica.png', Image: '/assets/Gallery/QuestQRLocations/panonsko jezero.png' },
 ];
 
 export const ROUTE_POI_PRESETS: RoutePoiPreset[] = [
@@ -65,9 +66,11 @@ export const POI_COLORS: Record<string, string> = {
   'salt_square': '#f59e0b',
   'palancinkara': '#ec4899',
   'palancikara': '#ec4899',
+  'stara_cesma': '#0ea5e9',
 };
 
 export const QUEST_TARGET_COORDS: Record<string, { lat: number; lon: number }> = {
+  stara_cesma: { lat: 44.538982, lon: 18.67558 },
   trg_slobode: { lat: 44.5395175, lon: 18.6749037 },
   salt_square: { lat: 44.5382182, lon: 18.6759398 },
   palancinkara: { lat: 44.5383762, lon: 18.6775339 },
@@ -82,7 +85,7 @@ export const QUEST_TARGET_COORDS: Record<string, { lat: number; lon: number }> =
   tvrtko_park: { lat: 44.5380826, lon: 18.6783327 },
 };
 
-export const PHASE_1_POIS = ['trg_slobode', 'kapija', 'mesa_selimovic'];
+export const PHASE_1_POIS = ['trg_slobode', 'kapija', 'mesa_selimovic', 'stara_cesma'];
 export const PHASE_2_POIS = ['tvrtko_park', 'palancinkara', 'salt_square'];
 export const PHASE_3_POIS = ['panonika', 'slapovi', 'slana_banja', 'atelje_ismet'];
 export const GRAND_FINALE_POIS = ['bingo_city_centar'];
